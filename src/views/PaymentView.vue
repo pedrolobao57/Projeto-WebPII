@@ -1,0 +1,368 @@
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { 
+  PhArrowLeft,
+  PhCreditCard,
+  PhDeviceMobile,
+  PhPlus,
+  PhTag
+} from '@phosphor-icons/vue'
+
+const router = useRouter()
+
+const paymentMethods = [
+  { id: 'visa', name: 'Visa', details: '**** 4242', icon: PhCreditCard },
+  { id: 'applepay', name: 'Apple Pay', details: '', icon: PhDeviceMobile },
+  { id: 'mbway', name: 'MB Way', details: '', icon: PhDeviceMobile }
+]
+
+const selectedMethod = ref('visa')
+const promoCode = ref('')
+
+const goBack = () => router.back()
+const handlePayment = () => {
+  // Process payment, then go to active navigation
+  router.push('/navigation')
+}
+</script>
+
+<template>
+  <div class="page-container">
+    <header class="header">
+      <button class="back-btn" @click="goBack">
+        <PhArrowLeft :size="24" />
+      </button>
+    </header>
+
+    <main class="content">
+      <div class="title-section">
+        <h1>Payment</h1>
+        <p class="subtitle">Complete your reservation</p>
+      </div>
+
+      <div class="section">
+        <h3 class="section-title">Order Summary</h3>
+        <div class="summary-card bg-card radius-lg">
+          <div class="spot-info">
+            <h4>Spot A-12</h4>
+            <p>Downtown Plaza • Level 2</p>
+          </div>
+          
+          <div class="reservation-details">
+            <div class="detail-row">
+              <span class="label">Date</span>
+              <span class="value">Today, Apr 8</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Time</span>
+              <span class="value">2:00 PM - 5:00 PM</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Duration</span>
+              <span class="value">3 hours</span>
+            </div>
+          </div>
+          
+          <div class="divider"></div>
+          
+          <div class="price-details">
+            <div class="detail-row">
+              <span class="label">Parking fee</span>
+              <span class="value">$24.00</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Service fee</span>
+              <span class="value">$1.50</span>
+            </div>
+          </div>
+          
+          <div class="total-row">
+            <span>Total</span>
+            <span class="total-amount text-cyan">$25.50</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3 class="section-title">Payment Method</h3>
+        <div class="payment-methods">
+          <div 
+            v-for="method in paymentMethods" 
+            :key="method.id"
+            class="payment-option bg-card radius-md"
+            :class="{ selected: selectedMethod === method.id }"
+            @click="selectedMethod = method.id"
+          >
+            <div class="option-left">
+              <component :is="method.icon" :size="24" class="method-icon text-secondary" />
+              <div class="method-info">
+                <span class="method-name">{{ method.name }}</span>
+                <span v-if="method.details" class="method-details">{{ method.details }}</span>
+              </div>
+            </div>
+            <div class="radio-circle" :class="{ active: selectedMethod === method.id }">
+              <div v-if="selectedMethod === method.id" class="inner-circle"></div>
+            </div>
+          </div>
+
+          <button class="add-card-btn">
+            <PhPlus :size="20" class="text-cyan" />
+            <span>Add New Card</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="section">
+        <h3 class="section-title">Promo Code</h3>
+        <div class="promo-input-wrapper">
+          <PhTag class="promo-icon" :size="20" />
+          <input type="text" v-model="promoCode" placeholder="Enter code" class="promo-input" />
+          <button class="apply-btn" :disabled="!promoCode">Apply</button>
+        </div>
+      </div>
+
+      <p class="cancellation-policy">
+        Free cancellation up to 1 hour before your reservation
+      </p>
+    </main>
+
+    <div class="bottom-action">
+      <button class="btn-primary w-full" @click="handlePayment">
+        Confirm & Pay $25.50
+      </button>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.content {
+  padding: 0 var(--spacing-4) 120px;
+}
+
+.title-section {
+  margin-bottom: var(--spacing-6);
+}
+
+h1 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+}
+
+.section {
+  margin-bottom: var(--spacing-6);
+}
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-3);
+}
+
+.summary-card {
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
+}
+
+.spot-info {
+  margin-bottom: var(--spacing-4);
+}
+
+.spot-info h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.spot-info p {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.detail-row .label {
+  color: var(--color-text-secondary);
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-border);
+  margin: var(--spacing-3) 0;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: var(--spacing-4);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.total-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.payment-methods {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+}
+
+.payment-option {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.payment-option.selected {
+  border-color: var(--color-accent-cyan);
+  background-color: var(--color-bg-card-hover);
+}
+
+.option-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.method-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.method-name {
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+.method-details {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.radio-circle {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.radio-circle.active {
+  border-color: var(--color-accent-cyan);
+}
+
+.inner-circle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--color-accent-cyan);
+}
+
+.add-card-btn {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: transparent;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.add-card-btn:hover {
+  border-color: var(--color-accent-cyan);
+  background-color: rgba(0, 212, 255, 0.05);
+}
+
+.promo-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.promo-icon {
+  position: absolute;
+  left: 1rem;
+  color: var(--color-text-secondary);
+  pointer-events: none;
+}
+
+.promo-input {
+  width: 100%;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem 5rem 1rem 3rem; /* Space for icon and button */
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+}
+
+.promo-input:focus {
+  outline: none;
+  border-color: var(--color-accent-cyan);
+}
+
+.apply-btn {
+  position: absolute;
+  right: 0.5rem;
+  background-color: var(--color-bg-card-lighter);
+  color: var(--color-accent-cyan);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0.4rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.apply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancellation-policy {
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-4);
+}
+
+.bottom-action {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 600px;
+  margin: 0 auto;
+  padding: var(--spacing-4);
+  background: linear-gradient(to top, var(--color-bg-base) 80%, transparent);
+  z-index: 10;
+}
+
+.w-full {
+  width: 100%;
+}
+</style>
