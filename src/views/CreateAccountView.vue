@@ -1,29 +1,60 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { PhArrowLeft, PhUser, PhEnvelopeSimple, PhLockKey, PhPhone, PhCar, PhCheckSquare, PhSquare } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhUser, PhEnvelopeSimple, PhLockKey, PhPhone, PhCar, PhCheckSquare, PhSquare, PhPlus, PhTrash } from '@phosphor-icons/vue'
+import { createUser } from '../api/users'
 
 const router = useRouter()
+const ALLOWED_BRANDS = ['Toyota', 'Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Ford', 'Renault', 'Peugeot', 'Tesla', 'Fiat']
 
 const form = ref({
   fullName: '',
   email: '',
   password: '',
   phone: '',
-  licensePlate: '',
-  brand: '',
-  model: '',
-  color: '',
+  vehicles: [
+    { plate: '', brand: '', model: '', color: '' }
+  ],
   agreeTerms: false
 })
+
+const errorMessage = ref('')
 
 const goBack = () => {
   router.back()
 }
 
-const handleSignup = () => {
-  // Mock registration
-  router.push('/dashboard')
+const addVehicle = () => {
+  form.value.vehicles.push({ plate: '', brand: '', model: '', color: '' })
+}
+
+const removeVehicle = (index) => {
+  if (form.value.vehicles.length > 1) {
+    form.value.vehicles.splice(index, 1)
+  }
+}
+
+const isEmailValid = computed(() => form.value.email.includes('@'))
+const isPasswordValid = computed(() => form.value.password.length >= 6)
+
+const handleSignup = async () => {
+  if (!isEmailValid.value || !isPasswordValid.value) return
+
+  try {
+    errorMessage.value = ''
+    const payload = {
+      name: form.value.fullName,
+      email: form.value.email,
+      password: form.value.password,
+      phone: form.value.phone,
+      vehicles: form.value.vehicles
+    }
+    
+    await createUser(payload)
+    router.push('/dashboard')
+  } catch (err) {
+    errorMessage.value = err.message || 'Erro ao criar conta'
+  }
 }
 
 const login = () => {
@@ -45,6 +76,8 @@ const login = () => {
         <p class="subtitle">Sign up to start parking smarter.</p>
       </div>
 
+      <div v-if="errorMessage" class="error-banner">{{ errorMessage }}</div>
+
       <form @submit.prevent="handleSignup" class="signup-form">
         <section class="form-section">
           <h3 class="section-title">Personal Information</h3>
@@ -56,13 +89,13 @@ const login = () => {
 
           <div class="input-group">
             <PhEnvelopeSimple class="input-icon" :size="20" />
-            <input type="email" placeholder="Email Address" v-model="form.email" required />
+            <input type="email" placeholder="Email Address" v-model="form.email" :class="{ invalid: form.email && !isEmailValid }" required />
           </div>
 
           <div class="input-group">
             <PhLockKey class="input-icon" :size="20" />
             <input type="password" placeholder="Password" v-model="form.password" required />
-            <span class="input-hint">Must be at least 8 characters</span>
+            <span class="input-hint" :class="{ valid: isPasswordValid }">Mínimo 6 caracteres</span>
           </div>
 
           <div class="input-group">
@@ -72,26 +105,46 @@ const login = () => {
         </section>
 
         <section class="form-section">
-          <h3 class="section-title">Vehicle Information</h3>
+          <div class="section-header">
+            <h3 class="section-title">Vehicle Information</h3>
+            <button type="button" class="btn-add" @click="addVehicle">
+              <PhPlus :size="16" /> Add Vehicle
+            </button>
+          </div>
           
-          <div class="input-group">
-            <PhCar class="input-icon" :size="20" />
-            <input type="text" placeholder="License Plate Number" v-model="form.licensePlate" />
-          </div>
-
-          <div class="row">
-            <div class="input-group half">
-              <input type="text" placeholder="Brand" v-model="form.brand" />
+          <div v-for="(vehicle, index) in form.vehicles" :key="index" class="vehicle-card">
+            <div class="vehicle-card-header" v-if="form.vehicles.length > 1">
+              <span>Vehicle #{{ index + 1 }}</span>
+              <button type="button" class="btn-remove" @click="removeVehicle(index)"><PhTrash :size="18" /></button>
             </div>
-            <div class="input-group half">
-              <input type="text" placeholder="Model" v-model="form.model" />
+
+            <div class="input-group">
+              <PhCar class="input-icon" :size="20" />
+              <input type="text" placeholder="License Plate" v-model="vehicle.plate" />
+            </div>
+
+            <div class="input-group">
+              <PhCar class="input-icon" :size="20" />
+              <select v-model="vehicle.brand" class="select-brand">
+                <option value="" disabled>Select a brand</option>
+                <option v-for="brand in ALLOWED_BRANDS" :key="brand" :value="brand">
+                  {{ brand }}
+                </option>
+              </select>
+             
+              
+              <span class="input-hint">Selecione a marca do veículo</span>
+            </div>
+
+            <div class="row">
+              <div class="input-group half">
+                <input type="text" placeholder="Model" v-model="vehicle.model" />
+              </div>
+              <div class="input-group half">
+                <input type="text" placeholder="Color" v-model="vehicle.color" />
+              </div>
             </div>
           </div>
-
-          <div class="input-group">
-            <input type="text" placeholder="Vehicle Color" v-model="form.color" />
-          </div>
-          <p class="section-note"><span class="info-icon">ℹ</span> You can add more vehicles later in your profile settings.</p>
         </section>
 
         <div class="terms-checkbox" @click="form.agreeTerms = !form.agreeTerms">
@@ -139,8 +192,48 @@ h1 {
 .section-title {
   font-size: 1rem;
   font-weight: 500;
-  margin-bottom: var(--spacing-4);
   color: var(--color-text-primary);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-4);
+}
+
+.btn-add {
+  background: none;
+  border: none;
+  color: var(--color-accent-cyan);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  cursor: pointer;
+}
+
+.vehicle-card {
+  background-color: rgba(255, 255, 255, 0.03);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--color-border);
+  margin-bottom: var(--spacing-4);
+}
+
+.vehicle-card-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: var(--color-text-secondary);
+  margin-bottom: var(--spacing-3);
+}
+
+.btn-remove {
+  background: none;
+  border: none;
+  color: #ff4d4d;
+  cursor: pointer;
 }
 
 .input-group {
@@ -167,14 +260,20 @@ input {
   transition: all 0.2s ease;
 }
 
-.input-group:has(.input-icon) input {
+.input-group:has(.input-icon) input,
+.input-group:has(.input-icon) .select-brand {
   padding-left: 3rem;
 }
 
-input:focus {
+input:focus,
+.select-brand:focus {
   outline: none;
   border-color: var(--color-accent-cyan);
   background-color: var(--color-bg-card-hover);
+}
+
+input.invalid {
+  border-color: #ff4d4d;
 }
 
 .input-hint {
@@ -185,6 +284,34 @@ input:focus {
   margin-left: 0.5rem;
 }
 
+.input-hint.valid {
+  color: #4ade80;
+}
+
+.select-brand {
+  width: 100%;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  appearance: none; /* Remove default browser styling for select */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E"); /* Custom arrow */
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+}
+.error-banner {
+  background-color: rgba(255, 77, 77, 0.1);
+  color: #ff4d4d;
+  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-4);
+  font-size: 0.9rem;
+  text-align: center;
+}
 .row {
   display: flex;
   gap: var(--spacing-4);

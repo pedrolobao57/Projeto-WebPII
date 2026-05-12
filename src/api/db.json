@@ -1,0 +1,23 @@
+{
+  "users": [],
+  "parks": [
+    {
+      "id": "1",
+      "name": "Downtown Plaza",
+      "spots": [
+        { "id": "s1", "name": "A-01", "available": true, "price": 8 },
+        { "id": "s2", "name": "A-02", "available": false, "price": 8 }
+      ]
+    },
+    {
+      "id": "2",
+      "name": "Central Station",
+      "spots": [
+        { "id": "s3", "name": "B-01", "available": true, "price": 6 }
+      ]
+    }
+  ],
+  "reservations": [],
+  "paymentMethods": [],
+  "orders": []
+}

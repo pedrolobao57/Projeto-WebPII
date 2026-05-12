@@ -31,7 +31,7 @@ async function request(method, path, body = null, params = null) {
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ message: response.statusText }))
-    throw error
+    throw { ...error, status: response.status } // Inclui o status HTTP no objeto de erro
   }
 
   // Return null for 204 No Content

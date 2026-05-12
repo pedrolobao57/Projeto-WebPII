@@ -11,6 +11,7 @@ export const getPaidOrders = () => {
 }
 
 // GET / - Generate a park usage report with optional time range filters
+// GET /reports/usage - Generate a park usage report with optional time range filters
 export const getParkReport = (filters = {}) => {
-  return apiClient.get('/', filters)
+  return apiClient.get('/reports/usage', filters)
 }
