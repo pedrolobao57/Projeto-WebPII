@@ -3,9 +3,10 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { PhArrowLeft, PhUser, PhEnvelopeSimple, PhLockKey, PhPhone, PhCar, PhCheckSquare, PhSquare, PhPlus, PhTrash } from '@phosphor-icons/vue'
 import { createUser } from '../api/users'
+import brands from '../api/brands'
 
 const router = useRouter()
-const ALLOWED_BRANDS = ['Toyota', 'Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Ford', 'Renault', 'Peugeot', 'Tesla', 'Fiat']
+const ALLOWED_BRANDS = brands
 
 const form = ref({
   fullName: '',
