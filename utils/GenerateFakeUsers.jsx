@@ -1,9 +1,10 @@
-import {faker}from "@faker-js/faker"; 
+import { faker } from "@faker-js/faker";
+import brands from "../src/api/brands";
 
-const ALLOWED_BRANDS = ['Toyota', 'Volkswagen', 'BMW', 'Mercedes', 'Audi', 'Ford', 'Renault', 'Peugeot', 'Tesla', 'Fiat'];
+const ALLOWED_BRANDS = brands;
 
 export const generateFakeUser = () => {
-    return{
+    return {
         id: faker.string.uuid(),
         name: faker.person.fullName(),
         email: faker.internet.email(),
@@ -13,13 +14,11 @@ export const generateFakeUser = () => {
         // Um utilizador agora tem vários veículos associados
         vehicles: [
             {
-                plate: faker.vehicle.plate(),
-                brand: faker.helpers.arrayElement(['Toyota', 'BMW', 'Tesla'])
-            },
-            {
-                plate: faker.vehicle.plate(),
-                brand: faker.helpers.arrayElement(['Audi', 'Ford'])
+                plate: faker.vehicle.vrm(),
+                brand: faker.helpers.arrayElement(ALLOWED_BRANDS),
+                model: faker.vehicle.model(),
+                color: faker.vehicle.color()
             }
         ]
-    }
+    };
 }
