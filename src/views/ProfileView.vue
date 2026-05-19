@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
@@ -16,13 +17,19 @@ import {
   PhFileText,
   PhSignOut
 } from '@phosphor-icons/vue'
+import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
+const { user, logout } = useAuth()
 const activeTab = ref('profile')
+
+const displayName = computed(() => user.value?.name || 'User')
+const displayEmail = computed(() => user.value?.email || '—')
+const displayPhone = computed(() => user.value?.phone || '—')
 
 const goBack = () => router.back()
 const handleSignOut = () => {
-  router.push('/')
+  logout()
 }
 </script>
 
@@ -40,8 +47,8 @@ const handleSignOut = () => {
           <PhUser :size="32" weight="fill" />
         </div>
         <div class="user-info">
-          <h2>John Doe</h2>
-          <p>john.doe@example.com</p>
+          <h2>{{ displayName }}</h2>
+          <p>{{ displayEmail }}</p>
         </div>
       </div>
 
@@ -86,7 +93,7 @@ const handleSignOut = () => {
             </div>
             <div class="setting-content">
               <span class="label">Full Name</span>
-              <span class="value">John Doe</span>
+              <span class="value">{{ displayName }}</span>
             </div>
             <button class="edit-btn"><PhPencilSimple :size="18" /></button>
           </div>
@@ -99,7 +106,7 @@ const handleSignOut = () => {
             </div>
             <div class="setting-content">
               <span class="label">Email Address</span>
-              <span class="value">john.doe@example.com</span>
+              <span class="value">{{ displayEmail }}</span>
             </div>
             <button class="edit-btn"><PhPencilSimple :size="18" /></button>
           </div>
@@ -112,7 +119,7 @@ const handleSignOut = () => {
             </div>
             <div class="setting-content">
               <span class="label">Phone Number</span>
-              <span class="value">+1 (555) 123-4567</span>
+              <span class="value">{{ displayPhone }}</span>
             </div>
             <button class="edit-btn"><PhPencilSimple :size="18" /></button>
           </div>

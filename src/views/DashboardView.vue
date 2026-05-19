@@ -1,10 +1,18 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { PhGear, PhArrowLeft, PhMapPin, PhCurrencyDollar, PhClock, PhQrCode, PhMedal } from '@phosphor-icons/vue'
+import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
-const activeTab = ref('upcoming') // 'upcoming' or 'history'
+const { user } = useAuth()
+const activeTab = ref('upcoming')
+
+const displayName = computed(() => user.value?.name || 'Driver')
+const initials = computed(() => {
+  const name = user.value?.name || ''
+  return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
+})
 
 const reservations = ref([
   {
@@ -44,10 +52,10 @@ const goToNav = () => router.push('/navigation')
 
     <main class="content">
       <div class="user-greeting">
-        <div class="avatar">JD</div>
+        <div class="avatar">{{ initials }}</div>
         <div class="greeting-text">
           <p>Welcome back,</p>
-          <h2>John Doe</h2>
+          <h2>{{ displayName }}</h2>
         </div>
       </div>
 
