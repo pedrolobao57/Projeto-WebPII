@@ -67,7 +67,7 @@ const handleSignup = async () => {
 }
 
 const login = () => {
-  router.push('/')
+  router.push('/login')
 }
 </script>
 
