@@ -4,13 +4,8 @@ import { PhMapPin, PhCalendarCheck, PhShieldCheck, PhClock } from '@phosphor-ico
 
 const router = useRouter()
 
-const getStarted = () => {
-  router.push('/signup')
-}
-
-const login = () => {
-  router.push('/dashboard') // Or /login if that existed, defaulting to dashboard for now
-}
+const getStarted = () => router.push('/signup')
+const login = () => router.push('/login')
 </script>
 
 <template>
@@ -338,3 +333,4 @@ footer {
   }
 }
 </style>
+

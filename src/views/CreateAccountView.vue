@@ -2,11 +2,13 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { PhArrowLeft, PhUser, PhEnvelopeSimple, PhLockKey, PhPhone, PhCar, PhCheckSquare, PhSquare, PhPlus, PhTrash } from '@phosphor-icons/vue'
-import { createUser } from '../api/users'
+import { createUser, loginUser } from '../api/users'
 import brands from '../api/brands'
+import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
 const ALLOWED_BRANDS = brands
+const { saveSession } = useAuth()
 
 const form = ref({
   fullName: '',
@@ -50,8 +52,14 @@ const handleSignup = async () => {
       phone: form.value.phone,
       vehicles: form.value.vehicles
     }
-    
+
+    // 1. Criar a conta
     await createUser(payload)
+
+    // 2. Login automático após registo
+    const response = await loginUser({ email: form.value.email, password: form.value.password })
+    saveSession(response.token, response.user)
+
     router.push('/dashboard')
   } catch (err) {
     errorMessage.value = err.message || 'Erro ao criar conta'
@@ -59,7 +67,7 @@ const handleSignup = async () => {
 }
 
 const login = () => {
-  router.push('/dashboard')
+  router.push('/login')
 }
 </script>
 
