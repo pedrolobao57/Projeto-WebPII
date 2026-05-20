@@ -1,3 +1,10 @@
+const db = require('./db');
+
+// Exemplo: buscar todos os parques
+db.query('SELECT * FROM parque_estacionamento', (err, results) => {
+  if (err) throw err;
+  console.log(results);
+});
 import apiClient from './client'
 
 /**
