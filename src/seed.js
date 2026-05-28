@@ -325,13 +325,22 @@ async function main() {
     console.log('Generating parks, zones and spots...');
 
     const parqueRows = [];
+    const realParks = [
+      { nome: 'Parque Pintos', localizacao: 'Rua de Júlio Dinis, Porto' },
+      { nome: 'Parque estacionamento SABA - Casa da Música', localizacao: 'Avenida da Boavista, Porto' },
+      { nome: 'Parking 5 Outubro', localizacao: 'Rua de 5 de Outubro, Porto' }
+    ];
 
     for (let i = 0; i < config.numParques; i += 1) {
       const capacidadeTotal = config.zonasPorParque * config.vagasPorZona;
+      const parkInfo = realParks[i] || {
+        nome: `Parque Extra ${i + 1}`,
+        localizacao: faker.location.streetAddress()
+      };
 
       parqueRows.push([
-        `Parque ${faker.location.city()} ${i + 1}`,
-        faker.location.streetAddress(),
+        parkInfo.nome,
+        parkInfo.localizacao,
         capacidadeTotal,
         'DISPONIVEL',
       ]);

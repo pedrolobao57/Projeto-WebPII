@@ -8,6 +8,7 @@ import { useAuth } from '../composables/useAuth'
 
 const router = useRouter()
 const ALLOWED_BRANDS = brands
+const ALLOWED_COLORS = ['Preto', 'Branco', 'Cinza', 'Vermelho', 'Azul', 'Verde', 'Amarelo', 'Outro']
 const { saveSession } = useAuth()
 
 const form = ref({
@@ -68,6 +69,13 @@ const handleSignup = async () => {
 
 const login = () => {
   router.push('/login')
+}
+
+const showDocModal = ref(false)
+const docType = ref('terms')
+const openDoc = (type) => {
+  docType.value = type
+  showDocModal.value = true
 }
 </script>
 
@@ -150,7 +158,12 @@ const login = () => {
                 <input type="text" placeholder="Model" v-model="vehicle.model" />
               </div>
               <div class="input-group half">
-                <input type="text" placeholder="Color" v-model="vehicle.color" />
+                <select v-model="vehicle.color" class="select-brand">
+                  <option value="" disabled>Select color</option>
+                  <option v-for="color in ALLOWED_COLORS" :key="color" :value="color">
+                    {{ color }}
+                  </option>
+                </select>
               </div>
             </div>
           </div>
@@ -159,7 +172,7 @@ const login = () => {
         <div class="terms-checkbox" @click="form.agreeTerms = !form.agreeTerms">
           <PhCheckSquare v-if="form.agreeTerms" :size="20" color="var(--color-accent-cyan)" weight="fill" />
           <PhSquare v-else :size="20" color="var(--color-text-secondary)" />
-          <span class="terms-text">I agree to the <a href="#" @click.stop>Terms of Service</a> and <a href="#" @click.stop>Privacy Policy</a></span>
+          <span class="terms-text">I agree to the <a href="#" @click.stop="openDoc('terms')">Terms of Service</a> and <a href="#" @click.stop="openDoc('privacy')">Privacy Policy</a></span>
         </div>
 
         <button type="submit" class="btn-primary w-full mt-4" :disabled="!form.agreeTerms">
@@ -171,6 +184,46 @@ const login = () => {
         Already have an account? <a href="#" @click.prevent="login">Sign in</a>
       </div>
     </main>
+
+    <!-- Document Modal (Terms & Privacy) -->
+    <div v-if="showDocModal" class="modal-overlay" @click.self="showDocModal = false">
+      <div class="modal-card bg-card radius-lg doc-modal-card animate-fade-in">
+        <h3 class="modal-title">{{ docType === 'terms' ? 'Terms of Service' : 'Privacy Policy' }}</h3>
+        
+        <div class="doc-content">
+          <template v-if="docType === 'terms'">
+            <h4>1. Acceptance of Terms</h4>
+            <p>By accessing and using ParkSmart, you accept and agree to be bound by the terms and provision of this agreement.</p>
+            
+            <h4>2. Spot Reservations</h4>
+            <p>Reservations are valid only for the specified period and spot number. Overstaying will incur additional charges based on the park's standard tariff.</p>
+            
+            <h4>3. User Conduct</h4>
+            <p>You agree to park only in designated spots and to follow all traffic and safety regulations within the parking facility.</p>
+            
+            <h4>4. Limitation of Liability</h4>
+            <p>ParkSmart is not liable for any theft, damage, or loss of property occurring inside the parking facilities.</p>
+          </template>
+          <template v-else>
+            <h4>1. Information We Collect</h4>
+            <p>We collect your personal information (name, email, phone number) and vehicle details (license plate, brand, model) to provide parking services.</p>
+            
+            <h4>2. Payment Processing</h4>
+            <p>Payment information is processed securely through authorized payment gateway partners. We do not store full credit card details on our servers.</p>
+            
+            <h4>3. Data Sharing</h4>
+            <p>We do not sell or share your personal data with third parties except as necessary to fulfill parking reservations or comply with legal requirements.</p>
+            
+            <h4>4. Your Rights</h4>
+            <p>You can request to view, update, or delete your account information at any time by contacting our support team.</p>
+          </template>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-primary" @click="showDocModal = false">Close</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -378,5 +431,97 @@ button:disabled {
 
 .w-full {
   width: 100%;
+}
+
+/* Modal Overlay Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-4);
+}
+.modal-card {
+  width: 100%;
+  max-width: 400px;
+  padding: var(--spacing-6);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xl);
+}
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-4);
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-4);
+}
+.btn-primary, .btn-secondary {
+  border-radius: var(--radius-md);
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+}
+.btn-primary {
+  background-color: var(--color-accent-cyan);
+  color: var(--color-bg-base);
+}
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Document Modal Styles */
+.doc-modal-card {
+  max-width: 500px;
+}
+.doc-content {
+  max-height: 300px;
+  overflow-y: auto;
+  margin-bottom: var(--spacing-4);
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  padding-right: 0.5rem;
+}
+.doc-content h4 {
+  color: var(--color-text-primary);
+  font-weight: 600;
+  margin-top: 1rem;
+  margin-bottom: 0.25rem;
+}
+.doc-content p {
+  margin-bottom: 1rem;
+}
+/* Custom Scrollbar for modal content */
+.doc-content::-webkit-scrollbar {
+  width: 4px;
+}
+.doc-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.doc-content::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 2px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+.animate-fade-in {
+  animation: fadeIn 0.2s ease-out;
 }
 </style>

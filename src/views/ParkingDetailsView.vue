@@ -1,39 +1,40 @@
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { PhArrowLeft, PhMapPin, PhLightning, PhShieldCheck, PhHouseLine, PhClock } from '@phosphor-icons/vue'
+import { getParkDetails, getParkSpots } from '../api/parks'
 
 const router = useRouter()
+const route = useRoute()
+const parkId = route.params.id
 
 const goBack = () => router.back()
 
-// Generate mock spots for 3 levels
-const generateSpots = (level, count, startId) => {
-  const spots = []
-  for (let i = 0; i < count; i++) {
-    const id = startId + i
-    // Randomly assign statuses for visual variety
-    let status = 'free'
-    if (i % 7 === 0) status = 'reserved'
-    else if (i % 3 === 0 || i % 4 === 0) status = 'occupied'
-    
-    spots.push({
-      id: `${id < 10 ? '0' + id : id}`,
-      status
-    })
-  }
-  return spots
-}
+const parkDetails = ref({
+  name: 'Carregando...',
+  location: '...',
+  availableSpots: 0,
+  price: 0,
+  totalSpots: 0
+})
 
-const levels = ref([
-  { name: 'Level 1', spots: generateSpots(1, 10, 1) },
-  { name: 'Level 2', spots: generateSpots(2, 10, 11) },
-  { name: 'Level 3', spots: generateSpots(3, 10, 21) },
-])
+const levels = ref([])
+
+onMounted(async () => {
+  try {
+    const details = await getParkDetails(parkId)
+    parkDetails.value = details
+    
+    const spotsData = await getParkSpots(parkId)
+    levels.value = spotsData
+  } catch (err) {
+    console.error('Erro ao carregar detalhes do parque:', err)
+  }
+})
 
 const selectSpot = (spot) => {
   if (spot.status === 'free') {
-    router.push(`/reserve/${spot.id}`)
+    router.push(`/reserve/${spot.id}?parkId=${parkId}&spotNumber=${spot.name}&price=${parkDetails.value.price}&parkName=${parkDetails.value.name}`)
   }
 }
 </script>
@@ -48,24 +49,23 @@ const selectSpot = (spot) => {
 
     <main class="content">
       <div class="location-header">
-        <h1>Downtown Plaza</h1>
+        <h1>{{ parkDetails.name }}</h1>
         <div class="location-details">
-          <p><PhMapPin :size="16" /> 123 Main Street, Downtown</p>
-          <p class="distance">0.2 mi away</p>
+          <p><PhMapPin :size="16" /> {{ parkDetails.location }}</p>
         </div>
       </div>
 
       <div class="top-stats">
         <div class="stat bg-card">
-          <span class="value text-cyan">45</span>
+          <span class="value text-cyan">{{ parkDetails.availableSpots }}</span>
           <span class="label">Available</span>
         </div>
         <div class="stat bg-card">
-          <span class="value">$8</span>
+          <span class="value">${{ parkDetails.price }}</span>
           <span class="label">Per Hour</span>
         </div>
         <div class="stat bg-card">
-          <span class="value">120</span>
+          <span class="value">{{ parkDetails.totalSpots }}</span>
           <span class="label">Total Spots</span>
         </div>
       </div>
@@ -119,7 +119,7 @@ const selectSpot = (spot) => {
               :disabled="spot.status !== 'free'"
               @click="selectSpot(spot)"
             >
-              {{ spot.id }}
+              {{ spot.name }}
             </button>
           </div>
         </div>

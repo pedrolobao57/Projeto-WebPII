@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   PhArrowLeft,
@@ -8,22 +8,81 @@ import {
   PhPlus,
   PhTag
 } from '@phosphor-icons/vue'
+import { createReservation } from '../api/reservations'
+import { payReservation, getPaymentMethods } from '../api/payments'
 
 const router = useRouter()
 
-const paymentMethods = [
+const pendingRes = ref(JSON.parse(localStorage.getItem('pending_reservation') || '{}'))
+
+const paymentMethods = ref([
   { id: 'visa', name: 'Visa', details: '**** 4242', icon: PhCreditCard },
   { id: 'applepay', name: 'Apple Pay', details: '', icon: PhDeviceMobile },
   { id: 'mbway', name: 'MB Way', details: '', icon: PhDeviceMobile }
-]
+])
 
 const selectedMethod = ref('visa')
 const promoCode = ref('')
+const loading = ref(false)
+const errorMessage = ref('')
+
+onMounted(async () => {
+  try {
+    const methods = await getPaymentMethods()
+    if (methods && methods.length > 0) {
+      paymentMethods.value = methods.map(m => ({
+        id: m.id,
+        name: m.name,
+        details: m.details,
+        icon: m.id === 'visa' ? PhCreditCard : PhDeviceMobile
+      }))
+    }
+  } catch (err) {
+    console.error('Erro ao buscar metodos de pagamento:', err)
+  }
+})
 
 const goBack = () => router.back()
-const handlePayment = () => {
-  // Process payment, then go to active navigation
-  router.push('/navigation')
+const handlePayment = async () => {
+  if (!pendingRes.value.spotId) {
+    errorMessage.value = 'Sem reserva pendente encontrada.'
+    return
+  }
+  
+  loading.value = true
+  errorMessage.value = ''
+  
+  try {
+    const dateStr = pendingRes.value.date
+    const startStr = `${dateStr}T${pendingRes.value.startTime}:00`
+    const endStr = `${dateStr}T${pendingRes.value.endTime}:00`
+    
+    // 1. Criar a reserva
+    const resResponse = await createReservation({
+      id_vaga: Number(pendingRes.value.spotId),
+      data_inicio: startStr,
+      data_fim: endStr
+    })
+    
+    const reservationId = resResponse.novaReserva.id_reserva
+    
+    // 2. Criar o pagamento
+    await payReservation(reservationId, {
+      method: selectedMethod.value,
+      amount: pendingRes.value.total
+    })
+    
+    // Limpar localStorage
+    localStorage.removeItem('pending_reservation')
+    
+    // Redirecionar para navegacao com id da reserva
+    router.push(`/navigation?reservationId=${reservationId}`)
+  } catch (err) {
+    console.error(err)
+    errorMessage.value = err.message || err.error || 'Erro ao processar pagamento.'
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 
@@ -41,26 +100,28 @@ const handlePayment = () => {
         <p class="subtitle">Complete your reservation</p>
       </div>
 
+      <div v-if="errorMessage" class="error-banner">{{ errorMessage }}</div>
+
       <div class="section">
         <h3 class="section-title">Order Summary</h3>
         <div class="summary-card bg-card radius-lg">
           <div class="spot-info">
-            <h4>Spot A-12</h4>
-            <p>Downtown Plaza • Level 2</p>
+            <h4>Spot {{ pendingRes.spotNumber }}</h4>
+            <p>{{ pendingRes.parkName }}</p>
           </div>
           
           <div class="reservation-details">
             <div class="detail-row">
               <span class="label">Date</span>
-              <span class="value">Today, Apr 8</span>
+              <span class="value">{{ pendingRes.date }}</span>
             </div>
             <div class="detail-row">
               <span class="label">Time</span>
-              <span class="value">2:00 PM - 5:00 PM</span>
+              <span class="value">{{ pendingRes.startTime }} - {{ pendingRes.endTime }}</span>
             </div>
             <div class="detail-row">
               <span class="label">Duration</span>
-              <span class="value">3 hours</span>
+              <span class="value">{{ pendingRes.duration }} hours</span>
             </div>
           </div>
           
@@ -69,7 +130,7 @@ const handlePayment = () => {
           <div class="price-details">
             <div class="detail-row">
               <span class="label">Parking fee</span>
-              <span class="value">$24.00</span>
+              <span class="value">${{ ((pendingRes.hourlyRate || 8) * (pendingRes.duration || 0)).toFixed(2) }}</span>
             </div>
             <div class="detail-row">
               <span class="label">Service fee</span>
@@ -79,7 +140,7 @@ const handlePayment = () => {
           
           <div class="total-row">
             <span>Total</span>
-            <span class="total-amount text-cyan">$25.50</span>
+            <span class="total-amount text-cyan">${{ (pendingRes.total || 0).toFixed(2) }}</span>
           </div>
         </div>
       </div>
@@ -128,8 +189,8 @@ const handlePayment = () => {
     </main>
 
     <div class="bottom-action">
-      <button class="btn-primary w-full" @click="handlePayment">
-        Confirm & Pay $25.50
+      <button class="btn-primary w-full" :disabled="loading" @click="handlePayment">
+        {{ loading ? 'Processing Payment...' : `Confirm & Pay $${(pendingRes.total || 0).toFixed(2)}` }}
       </button>
     </div>
   </div>
@@ -341,6 +402,17 @@ h1 {
 .apply-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.error-banner {
+  background-color: rgba(255, 77, 77, 0.1);
+  color: #ff4d4d;
+  border: 1px solid rgba(255, 77, 77, 0.2);
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-4);
+  font-size: 0.9rem;
+  text-align: center;
 }
 
 .cancellation-policy {

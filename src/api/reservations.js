@@ -15,6 +15,11 @@ export const getReservation = (reservationId) => {
   return apiClient.get(`/reservations/${reservationId}`)
 }
 
+// GET /users/me/reservations - Get all reservations of the current authenticated user
+export const getUserReservations = () => {
+  return apiClient.get('/users/me/reservations')
+}
+
 // DELETE /reservations/{reservationId} - Cancel a reservation
 export const cancelReservation = (reservationId) => {
   return apiClient.delete(`/reservations/${reservationId}`)

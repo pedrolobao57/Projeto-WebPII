@@ -5,8 +5,8 @@ const Zona = require('./zona');
 const Vaga = sequelize.define('Vaga', {
     id_vaga: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     numero_vaga: { type: DataTypes.STRING(10), allowNull: false },
-    tipo_vaga: { type: DataTypes.ENUM('Normal', 'Mobilidade_Reduzida', 'Eletrico', 'Preferenciais'), allowNull: false },
-    estado: { type: DataTypes.ENUM('Livre', 'Ocupada', 'Reservada', 'Manutencao'), defaultValue: 'Livre' },
+    tipo_vaga: { type: DataTypes.ENUM('GERAL', 'MOBILIDADE_REDUZIDA', 'ELETRICO', 'MOTOCICLO'), allowNull: false, defaultValue: 'GERAL' },
+    estado: { type: DataTypes.ENUM('LIVRE', 'OCUPADO', 'RESERVADO', 'INDISPONIVEL'), defaultValue: 'LIVRE' },
     id_zona: { type: DataTypes.INTEGER, references: { model: Zona, key: 'id_zona' } }
 }, { tableName: 'vaga', timestamps: false });
 

@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { PhGear, PhArrowLeft, PhMapPin, PhCurrencyDollar, PhClock, PhQrCode, PhMedal } from '@phosphor-icons/vue'
 import { useAuth } from '../composables/useAuth'
+import { getUserReservations } from '../api/reservations'
 
 const router = useRouter()
 const { user } = useAuth()
@@ -14,29 +15,37 @@ const initials = computed(() => {
   return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || '?'
 })
 
-const reservations = ref([
-  {
-    id: 'A-12',
-    status: 'Active',
-    location: 'Downtown Plaza',
-    level: 'Level 2',
-    time: '2:00 PM - 5:00 PM Today',
-    spotId: '1'
-  },
-  {
-    id: 'C-24',
-    status: 'Upcoming',
-    location: 'Harbor View',
-    level: 'Level 1',
-    time: '9:00 AM - 12:00 PM Apr 8, 2026',
-    spotId: '2'
+const reservations = ref([])
+
+onMounted(async () => {
+  try {
+    const data = await getUserReservations()
+    reservations.value = data
+  } catch (err) {
+    console.error('Erro ao carregar reservas:', err)
   }
-])
+})
+
+const filteredReservations = computed(() => {
+  if (activeTab.value === 'upcoming') {
+    return reservations.value.filter(r => r.status === 'Active' || r.status === 'Upcoming')
+  } else {
+    return reservations.value.filter(r => r.status === 'Cancelled' || r.status === 'Completed')
+  }
+})
+
+const activeCount = computed(() => reservations.value.filter(r => r.status === 'Active').length)
 
 const goBack = () => router.back()
 const goToProfile = () => router.push('/profile')
 const openMap = () => router.push('/map')
-const goToNav = () => router.push('/navigation')
+const goToNav = (resId) => {
+  if (resId) {
+    router.push(`/navigation?reservationId=${resId}`)
+  } else {
+    router.push('/navigation')
+  }
+}
 </script>
 
 <template>
@@ -64,7 +73,7 @@ const goToNav = () => router.push('/navigation')
           <div class="icon-wrapper cyan">
             <PhMapPin :size="20" weight="fill" />
           </div>
-          <h3>1</h3>
+          <h3>{{ activeCount }}</h3>
           <p>Active</p>
         </div>
         
@@ -103,20 +112,20 @@ const goToNav = () => router.push('/navigation')
       </div>
 
       <div class="reservations-list">
-        <div v-for="res in reservations" :key="res.id" class="reservation-card bg-card radius-lg" @click="goToNav">
+        <div v-for="res in filteredReservations" :key="res.id" class="reservation-card bg-card radius-lg" @click="goToNav(res.id)">
           <div class="res-info">
             <div class="res-header">
-              <h3 class="text-cyan">{{ res.id }}</h3>
+              <h3 class="text-cyan">{{ res.resIdHex }}</h3>
               <span v-if="res.status === 'Active'" class="badge active">Active</span>
             </div>
             <p class="location">{{ res.location }}</p>
-            <p class="level">{{ res.level }}</p>
+            <p class="level">Vaga {{ res.spotNumber }} • {{ res.level }}</p>
             <div class="time-info">
               <PhClock :size="14" class="text-secondary" />
               <span>{{ res.time }}</span>
             </div>
           </div>
-          <button class="qr-btn" @click.stop="goToNav">
+          <button class="qr-btn" @click.stop="goToNav(res.id)">
             <PhQrCode :size="24" color="var(--color-bg-base)" />
           </button>
         </div>

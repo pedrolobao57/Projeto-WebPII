@@ -1,12 +1,17 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { PhMagnifyingGlass, PhMapPin, PhList, PhCrosshair, PhPlus, PhMinus } from '@phosphor-icons/vue'
+import { getParks } from '../api/parks'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 const router = useRouter()
 
 const filters = ['Price', 'Distance', 'EV Charging', 'Covered']
 const activeFilters = ref([])
+const searchQuery = ref('')
+const nearbyLocations = ref([])
 
 const toggleFilter = (filter) => {
   if (activeFilters.value.includes(filter)) {
@@ -16,12 +21,198 @@ const toggleFilter = (filter) => {
   }
 }
 
-const nearbyLocations = [
-  { id: '1', name: 'Downtown Plaza', distance: '0.2 mi', spots: '24/50', price: '$8', isAvailable: true },
-  { id: '2', name: 'Central Station', distance: '0.5 mi', spots: '12/40', price: '$6', isAvailable: true },
-  { id: '3', name: 'Harbor View', distance: '0.8 mi', spots: '35/60', price: '$10', isAvailable: true },
-  { id: '4', name: 'Tech Hub Garage', distance: '1.2 mi', spots: '8/30', price: '$5', isAvailable: false },
-]
+// User location coords (Porto, Portugal center)
+const userCoords = ref({ lat: 41.1579, lng: -8.6291 })
+const mapInstance = ref(null)
+const markers = ref([])
+
+// Static coordinates for seeded parks to display them in Porto
+const PARK_COORDS = {
+  1: { lat: 41.156232, lng: -8.627649}, // Parque Pintos
+  2: { lat: 41.1600696, lng: -8.6319006 }, // Parque estacionamento SABA - Casa da Música
+  3: { lat: 41.1616038, lng: -8.6321563 }  // Parking 5 Outubro
+}
+
+const getCoordsForPark = (park, idx) => {
+  const predefined = PARK_COORDS[park.id]
+  if (predefined) return predefined
+  
+  // Generate deterministic offsets around Porto center
+  const angle = (idx * 2 * Math.PI) / 5
+  const r = 0.006 + (idx * 0.002)
+  return {
+    lat: userCoords.value.lat + r * Math.sin(angle),
+    lng: userCoords.value.lng + r * Math.cos(angle)
+  }
+}
+
+// Custom DivIcon for user position
+const userIcon = L.divIcon({
+  className: 'custom-user-marker',
+  html: `
+    <div class="user-marker-container">
+      <div class="pulse"></div>
+      <div class="dot"></div>
+    </div>
+  `,
+  iconSize: [20, 20],
+  iconAnchor: [10, 10]
+})
+
+// Custom DivIcon for parking pins showing the hourly rate
+const createParkIcon = (loc) => {
+  const colorClass = loc.isAvailable ? 'green' : 'red'
+  return L.divIcon({
+    className: 'custom-leaflet-marker',
+    html: `
+      <div class="custom-leaflet-pin ${colorClass}">
+        <div class="pin-ring"></div>
+        <div class="pin-dot"></div>
+        <span class="pin-price">${loc.price}</span>
+      </div>
+    `,
+    iconSize: [40, 45],
+    iconAnchor: [20, 45],
+    popupAnchor: [0, -45]
+  })
+}
+
+// Computes filtered and sorted locations
+const filteredLocations = computed(() => {
+  let list = nearbyLocations.value
+
+  // Filter by search query
+  if (searchQuery.value.trim()) {
+    const q = searchQuery.value.toLowerCase()
+    list = list.filter(l => 
+      l.name.toLowerCase().includes(q) || 
+      (l.location && l.location.toLowerCase().includes(q))
+    )
+  }
+
+  // Apply filters
+  activeFilters.value.forEach(filter => {
+    if (filter === 'Price') {
+      // Sort by price ascending
+      list = [...list].sort((a, b) => {
+        const valA = parseFloat(a.price.replace(/[^0-9.]/g, ''))
+        const valB = parseFloat(b.price.replace(/[^0-9.]/g, ''))
+        return valA - valB
+      })
+    } else if (filter === 'Distance') {
+      // Sort by distance ascending
+      list = [...list].sort((a, b) => {
+        const valA = parseFloat(a.distance.replace(/[^0-9.]/g, ''))
+        const valB = parseFloat(b.distance.replace(/[^0-9.]/g, ''))
+        return valA - valB
+      })
+    } else if (filter === 'EV Charging') {
+      // Show only parks that have electric charging spots (simulate by park id % 2 === 1)
+      list = list.filter(l => l.id % 2 === 1)
+    } else if (filter === 'Covered') {
+      // Show only covered parks (simulate by park id % 2 === 0)
+      list = list.filter(l => l.id % 2 === 0)
+    }
+  })
+
+  return list
+})
+
+const updateMapMarkers = () => {
+  if (!mapInstance.value) return
+
+  // Remove existing markers
+  markers.value.forEach(m => m.remove())
+  markers.value = []
+
+  // Add new markers
+  filteredLocations.value.forEach((loc, idx) => {
+    const coords = getCoordsForPark(loc, idx)
+    const marker = L.marker([coords.lat, coords.lng], {
+      icon: createParkIcon(loc)
+    }).addTo(mapInstance.value)
+
+    marker.bindPopup(`
+      <div class="map-popup-card">
+        <h3>${loc.name}</h3>
+        <p class="popup-address">${loc.location || 'Porto, Portugal'}</p>
+        <div class="popup-meta">
+          <span class="popup-spots ${loc.isAvailable ? 'text-cyan' : 'text-danger'}">${loc.spots} spots</span>
+          <span class="popup-price"><strong>${loc.price}</strong>/h</span>
+        </div>
+        <button class="popup-btn" onclick="window.navigateToPark(${loc.id})">View Details</button>
+      </div>
+    `, { closeButton: false, className: 'custom-leaflet-popup' })
+
+    // Center map on marker on click
+    marker.on('click', () => {
+      mapInstance.value.setView([coords.lat, coords.lng], 15)
+    })
+
+    markers.value.push(marker)
+  })
+}
+
+// Watch filtered list and update map markers automatically
+watch(filteredLocations, () => {
+  updateMapMarkers()
+}, { deep: true })
+
+const zoomIn = () => {
+  if (mapInstance.value) mapInstance.value.zoomIn()
+}
+
+const zoomOut = () => {
+  if (mapInstance.value) mapInstance.value.zoomOut()
+}
+
+const centerOnUser = () => {
+  if (mapInstance.value) {
+    mapInstance.value.setView([userCoords.value.lat, userCoords.value.lng], 14)
+  }
+}
+
+onMounted(async () => {
+  try {
+    const data = await getParks()
+    nearbyLocations.value = data
+  } catch (err) {
+    console.error('Erro ao carregar parques:', err)
+  }
+
+  // Bind routing navigation globally for popup actions
+  window.navigateToPark = (id) => {
+    router.push(`/parking/${id}`)
+  }
+
+  // Initialize Map
+  mapInstance.value = L.map('map', {
+    zoomControl: false,
+    attributionControl: false
+  }).setView([userCoords.value.lat, userCoords.value.lng], 14)
+
+  // Load dark theme tiles
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 19
+  }).addTo(mapInstance.value)
+
+  // User location marker
+  L.marker([userCoords.value.lat, userCoords.value.lng], {
+    icon: userIcon
+  }).addTo(mapInstance.value)
+
+  // Draw markers
+  updateMapMarkers()
+})
+
+onUnmounted(() => {
+  if (window.navigateToPark) {
+    delete window.navigateToPark
+  }
+  if (mapInstance.value) {
+    mapInstance.value.remove()
+  }
+})
 
 const openDetails = (id) => {
   router.push(`/parking/${id}`)
@@ -40,7 +231,7 @@ const openDetails = (id) => {
 
       <div class="search-bar">
         <PhMagnifyingGlass :size="20" class="search-icon" />
-        <input type="text" placeholder="Search for parking..." />
+        <input type="text" placeholder="Search for parking..." v-model="searchQuery" />
         <button class="filter-btn"><PhList :size="20" /></button>
       </div>
 
@@ -58,60 +249,26 @@ const openDetails = (id) => {
     </div>
 
     <div class="map-view">
-      <!-- Placeholder Map UI -->
-      <div class="mock-map">
-        <!-- Roads -->
-        <div class="road horizontal" style="top: 30%"></div>
-        <div class="road horizontal" style="top: 70%"></div>
-        <div class="road vertical" style="left: 40%"></div>
-        
-        <!-- Blocks -->
-        <div class="block" style="top: 10%; left: 10%; width: 25%; height: 15%;"></div>
-        <div class="block" style="top: 40%; left: 10%; width: 25%; height: 25%;"></div>
-        <div class="block" style="top: 10%; left: 50%; width: 40%; height: 15%;"></div>
-        <div class="block" style="top: 40%; left: 50%; width: 40%; height: 25%;"></div>
+      <!-- Real Map UI -->
+      <div id="map"></div>
 
-        <!-- Pins -->
-        <div class="pin green" style="top: 25%; left: 35%;" @click="openDetails('1')">
-          <PhMapPin weight="fill" />
-        </div>
-        <div class="pin yellow" style="top: 45%; left: 60%;" @click="openDetails('2')">
-          <PhMapPin weight="fill" />
-        </div>
-        <div class="pin teal" style="top: 65%; left: 20%;" @click="openDetails('3')">
-          <div class="pin-inner"><PhMapPin weight="fill" /></div>
-        </div>
-        <div class="pin green" style="top: 75%; left: 75%;" @click="openDetails('4')">
-          <PhMapPin weight="fill" />
-        </div>
-        <div class="pin red" style="top: 15%; left: 85%;">
-          <PhMapPin weight="fill" />
-        </div>
-
-        <div class="user-location" style="top: 50%; left: 50%;">
-          <div class="pulse"></div>
-          <div class="dot"></div>
-        </div>
-
-        <!-- Map Controls -->
-        <div class="map-controls">
-          <button class="control-btn"><PhCrosshair :size="20" /></button>
-          <div class="zoom-controls">
-            <button class="zoom-btn"><PhPlus :size="20" /></button>
-            <div class="divider"></div>
-            <button class="zoom-btn"><PhMinus :size="20" /></button>
-          </div>
+      <!-- Map Controls -->
+      <div class="map-controls">
+        <button class="control-btn" @click="centerOnUser"><PhCrosshair :size="20" /></button>
+        <div class="zoom-controls">
+          <button class="zoom-btn" @click="zoomIn"><PhPlus :size="20" /></button>
+          <div class="divider"></div>
+          <button class="zoom-btn" @click="zoomOut"><PhMinus :size="20" /></button>
         </div>
       </div>
     </div>
 
     <div class="bottom-sheet">
-      <div class="sheet-handle"></div>
       <h3 class="sheet-title">Nearby Parking</h3>
       
       <div class="locations-scroll">
         <div 
-          v-for="loc in nearbyLocations" 
+          v-for="loc in filteredLocations" 
           :key="loc.id" 
           class="location-card bg-card radius-lg"
           @click="openDetails(loc.id)"
@@ -144,14 +301,20 @@ const openDetails = (id) => {
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  background-color: #1e2638; /* Slightly lighter base for map contrast */
+  background-color: var(--color-bg-base);
 }
 
 .map-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1010;
+  background-color: rgba(11, 17, 30, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
   padding: var(--spacing-4);
-  background-color: var(--color-bg-base);
-  z-index: 10;
-  box-shadow: var(--shadow-md);
 }
 
 .top-row {
@@ -240,88 +403,195 @@ const openDetails = (id) => {
 }
 
 .map-view {
-  flex: 1;
+  height: 80%;
+  width: 100%;
   position: relative;
-  background-color: #f0f4f8; /* Very light color like in the mockup map */
-  overflow: hidden;
+  z-index: 1;
 }
 
-.mock-map {
+#map {
   width: 100%;
   height: 100%;
+  background-color: var(--color-bg-base);
+}
+
+/* Custom Leaflet Marker Styling */
+.custom-leaflet-marker {
+  background: transparent;
+  border: none;
+}
+.custom-leaflet-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   position: relative;
-  background-color: #e2e8f0;
+}
+.custom-leaflet-pin .pin-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  z-index: 2;
+}
+.custom-leaflet-pin.green .pin-dot {
+  background-color: var(--color-status-free);
+  box-shadow: 0 0 8px var(--color-status-free);
+}
+.custom-leaflet-pin.red .pin-dot {
+  background-color: var(--color-status-occupied);
+  box-shadow: 0 0 8px var(--color-status-occupied);
 }
 
-.road {
+.custom-leaflet-pin .pin-ring {
   position: absolute;
-  background-color: #ffffff;
-}
-.road.horizontal { width: 100%; height: 20px; }
-.road.vertical { width: 20px; height: 100%; }
-
-.block {
-  position: absolute;
-  background-color: #d1d5db;
-  border-radius: 4px;
-}
-
-.pin {
-  position: absolute;
-  font-size: 24px;
-  transform: translate(-50%, -100%);
-  filter: drop-shadow(0 4px 4px rgba(0,0,0,0.2));
-  cursor: pointer;
-  transition: transform 0.2s;
-  z-index: 5;
-}
-
-.pin:hover {
-  transform: translate(-50%, -110%) scale(1.1);
-}
-
-.pin.green { color: #22c55e; }
-.pin.yellow { color: #eab308; }
-.pin.red { color: #ef4444; }
-.pin.teal { color: #00d4ff; font-size: 32px; z-index: 6; }
-
-.user-location {
-  position: absolute;
-  transform: translate(-50%, -50%);
+  top: -4px;
+  left: 10px;
   width: 20px;
   height: 20px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  animation: pulsePin 2s infinite;
+  z-index: 1;
+}
+@keyframes pulsePin {
+  0% { transform: scale(0.8); opacity: 1; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+.custom-leaflet-pin .pin-price {
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-top: 3px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s;
+  z-index: 3;
+}
+.custom-leaflet-pin:hover .pin-price {
+  background-color: var(--color-accent-cyan);
+  color: var(--color-bg-base);
+  border-color: var(--color-accent-cyan);
+  transform: scale(1.1);
+}
+
+/* User marker styles */
+.custom-user-marker {
+  background: transparent;
+  border: none;
+}
+.user-marker-container {
+  width: 20px;
+  height: 20px;
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-
-.user-location .dot {
-  width: 12px;
-  height: 12px;
+.user-marker-container .dot {
+  width: 10px;
+  height: 10px;
   background-color: #3b82f6;
   border: 2px solid white;
   border-radius: 50%;
   z-index: 2;
+  box-shadow: 0 0 8px #3b82f6;
 }
-
-.user-location .pulse {
+.user-marker-container .pulse {
   position: absolute;
   width: 100%;
   height: 100%;
   background-color: rgba(59, 130, 246, 0.4);
   border-radius: 50%;
   animation: pulse 2s infinite;
+  z-index: 1;
+}
+
+/* Custom Popup Styles */
+.custom-leaflet-popup :deep(.leaflet-popup-content-wrapper) {
+  background-color: var(--color-bg-card) !important;
+  color: var(--color-text-primary) !important;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  box-shadow: var(--shadow-xl);
+}
+.custom-leaflet-popup :deep(.leaflet-popup-tip) {
+  background-color: var(--color-bg-card) !important;
+  border-left: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+.custom-leaflet-popup :deep(.leaflet-popup-content) {
+  margin: 8px 12px !important;
+}
+.map-popup-card {
+  padding: 2px;
+  width: 160px;
+}
+.map-popup-card h3 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 2px;
+  color: var(--color-text-primary);
+}
+.map-popup-card .popup-address {
+  font-size: 0.7rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.map-popup-card .popup-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.map-popup-card .popup-spots {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.map-popup-card .popup-price {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+.map-popup-card .popup-price strong {
+  color: var(--color-accent-cyan);
+  font-size: 0.85rem;
+}
+.map-popup-card .popup-btn {
+  width: 100%;
+  background-color: var(--color-accent-cyan);
+  color: #000000;
+  border: none;
+  padding: 5px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: opacity 0.2s;
+  text-align: center;
+}
+.map-popup-card .popup-btn:hover {
+  opacity: 0.9;
 }
 
 @keyframes pulse {
   0% { transform: scale(1); opacity: 1; }
-  100% { transform: scale(3); opacity: 0; }
+  100% { transform: scale(2.5); opacity: 0; }
 }
 
 .map-controls {
+  z-index: 1010;
   position: absolute;
   right: 16px;
-  bottom: 30px;
+  bottom: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -363,43 +633,45 @@ const openDetails = (id) => {
 }
 
 .bottom-sheet {
+  height: 20%;
   background-color: var(--color-bg-base);
-  border-top-left-radius: var(--radius-xl);
-  border-top-right-radius: var(--radius-xl);
-  padding: var(--spacing-3) var(--spacing-4) var(--spacing-6);
-  position: relative;
-  box-shadow: 0 -4px 20px rgba(0,0,0,0.2);
-}
-
-.sheet-handle {
-  width: 40px;
-  height: 4px;
-  background-color: var(--color-border);
-  border-radius: 2px;
-  margin: 0 auto var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+  padding: var(--spacing-3) var(--spacing-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  z-index: 10;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .sheet-title {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
-  margin-bottom: var(--spacing-4);
+  margin-bottom: 0;
+  width: 100%;
+  text-align: left;
 }
 
 .locations-scroll {
   display: flex;
-  gap: var(--spacing-4);
+  gap: var(--spacing-3);
   overflow-x: auto;
   scrollbar-width: none;
-  padding-bottom: var(--spacing-2);
+  flex: 1;
+  align-items: center;
 }
 .locations-scroll::-webkit-scrollbar { display: none; }
 
 .location-card {
-  min-width: 240px;
-  padding: var(--spacing-4);
+  min-width: 220px;
+  height: 85px;
+  padding: var(--spacing-3);
   border: 1px solid var(--color-border);
   cursor: pointer;
   transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .location-card:hover {
@@ -415,9 +687,12 @@ const openDetails = (id) => {
 }
 
 .loc-header h4 {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 600;
   width: 60%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .price {

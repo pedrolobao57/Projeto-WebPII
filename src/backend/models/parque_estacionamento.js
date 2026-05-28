@@ -6,7 +6,7 @@ const ParqueEstacionamento = sequelize.define('ParqueEstacionamento', {
     nome: { type: DataTypes.STRING(100), allowNull: false },
     localizacao: { type: DataTypes.STRING(200) },
     capacidade_total: { type: DataTypes.INTEGER, allowNull: false },
-    estado: { type: DataTypes.ENUM('Aberto', 'Cheio', 'Fechado'), defaultValue: 'Aberto' }
+    estado: { type: DataTypes.ENUM('DISPONIVEL', 'CHEIO', 'ENCERRADO'), defaultValue: 'DISPONIVEL' }
 }, { tableName: 'parque_estacionamento', timestamps: false });
 
 module.exports = ParqueEstacionamento;

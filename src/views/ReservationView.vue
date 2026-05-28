@@ -14,21 +14,47 @@ import {
 const router = useRouter()
 const route = useRoute()
 
-const spotId = route.params.spotId || 'A-02'
+const spotId = route.params.spotId || '1'
+const spotNumber = computed(() => route.query.spotNumber || 'A-02')
+const parkName = computed(() => route.query.parkName || 'Downtown Plaza')
+const hourlyRate = computed(() => Number(route.query.price) || 8)
 
 const date = ref(new Date().toISOString().split('T')[0])
 const startTime = ref('14:00')
 const endTime = ref('17:00')
 
-const hourlyRate = 8
 const serviceFee = 1.5
 
-// Mock duration calculation
-const duration = computed(() => 3) // Hardcoded 3 hours for demo based on mockup
-const total = computed(() => (hourlyRate * duration.value) + serviceFee)
+// Dynamic duration calculation
+const duration = computed(() => {
+  if (!startTime.value || !endTime.value) return 0
+  const [startH, startM] = startTime.value.split(':').map(Number)
+  const [endH, endM] = endTime.value.split(':').map(Number)
+  
+  let diffMin = (endH * 60 + endM) - (startH * 60 + startM)
+  if (diffMin < 0) diffMin += 24 * 60
+  
+  return Number((diffMin / 60).toFixed(1))
+})
+
+const total = computed(() => (hourlyRate.value * duration.value) + serviceFee)
 
 const goBack = () => router.back()
-const proceedToPayment = () => router.push('/payment')
+const proceedToPayment = () => {
+  localStorage.setItem('pending_reservation', JSON.stringify({
+    spotId: spotId,
+    parkId: route.query.parkId,
+    spotNumber: spotNumber.value,
+    parkName: parkName.value,
+    date: date.value,
+    startTime: startTime.value,
+    endTime: endTime.value,
+    duration: duration.value,
+    hourlyRate: hourlyRate.value,
+    total: total.value
+  }))
+  router.push('/payment')
+}
 </script>
 
 <template>
@@ -42,8 +68,8 @@ const proceedToPayment = () => router.push('/payment')
     <main class="content">
       <div class="spot-header">
         <p class="subtitle">Parking Spot</p>
-        <h1>{{ spotId }}</h1>
-        <p class="location-details">Downtown Plaza • Level 2, Zone A</p>
+        <h1>{{ spotNumber }}</h1>
+        <p class="location-details">{{ parkName }}</p>
         <div class="status-badge">
           <span class="dot green"></span>
           <span class="text-free">Available Now</span>

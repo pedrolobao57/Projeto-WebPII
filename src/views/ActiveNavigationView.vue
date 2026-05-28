@@ -1,5 +1,6 @@
 <script setup>
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { 
   PhArrowLeft, 
   PhArrowUpRight,
@@ -7,8 +8,34 @@ import {
   PhQrCode,
   PhCheckCircle
 } from '@phosphor-icons/vue'
+import { getReservation, getUserReservations } from '../api/reservations'
 
 const router = useRouter()
+const route = useRoute()
+const reservationId = route.query.reservationId
+
+const activeReservation = ref({
+  spotNumber: 'A-12',
+  location: 'Downtown Plaza',
+  level: 'Level 2'
+})
+
+onMounted(async () => {
+  try {
+    if (reservationId) {
+      const data = await getReservation(reservationId)
+      activeReservation.value = data
+    } else {
+      const list = await getUserReservations()
+      const active = list.find(r => r.status === 'Active') || list[0]
+      if (active) {
+        activeReservation.value = active
+      }
+    }
+  } catch (err) {
+    console.error('Erro ao carregar detalhes de navegacao:', err)
+  }
+})
 
 const goBack = () => router.back()
 const showQR = () => {
@@ -57,10 +84,10 @@ const arrive = () => {
       <div class="sheet-handle"></div>
       
       <div class="spot-info">
-        <div class="spot-badge">A-12</div>
+        <div class="spot-badge">{{ activeReservation.spotNumber }}</div>
         <div class="spot-details">
           <h3>Your Parking Spot</h3>
-          <p>Downtown Plaza • Level 2, Zone A</p>
+          <p>{{ activeReservation.location }} • {{ activeReservation.level }}</p>
         </div>
       </div>
 
@@ -74,7 +101,7 @@ const arrive = () => {
           <span class="stat-label">Distance</span>
         </div>
         <div class="stat-box bg-card">
-          <span class="stat-value">L2</span>
+          <span class="stat-value">{{ activeReservation.level.replace('Level ', 'L').replace('Piso ', 'L') }}</span>
           <span class="stat-label">Floor</span>
         </div>
       </div>
