@@ -10,7 +10,26 @@
       "name": "Auth & User",
       "item": [
         {
-          "name": "Sign Up",
+          "name": "Sign Up (Create User)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.id) {",
+                  "    pm.collectionVariables.set(\"userId\", response.id.toString());",
+                  "    console.log(\"Saved registered userId to variables!\");",
+                  "}",
+                  "if (response.vehicles && response.vehicles.length > 0) {",
+                  "    pm.collectionVariables.set(\"vehicleId\", response.vehicles[0].id_veiculo.toString());",
+                  "    console.log(\"Saved registered vehicleId to variables!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "noauth"
@@ -424,7 +443,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"method\": \"visa\",\n  \"amount\": 12.50\n}",
+              "raw": "{\n  \"method\": \"visa\",\n  \"amount\": 12.50,\n  \"promoCode\": \"Codigo VSKI\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -507,7 +526,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id_estacionamento\": {{estacionamentoId}},\n  \"id_tarifa\": null,\n  \"metodo_pagamento\": \"MBWAY\",\n  \"id_utilizador\": {{userId}}\n}",
+              "raw": "{\n  \"id_estacionamento\": {{estacionamentoId}},\n  \"id_tarifa\": null,\n  \"metodo_pagamento\": \"MBWAY\",\n  \"id_utilizador\": {{userId}},\n  \"promoCode\": \"Codigo VSKI\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

@@ -405,13 +405,12 @@ async function main() {
       idVaga,
       'OCUPACAO',
       'LIVRE',
-      faker.date.past({ years: 1 }),
     ]);
 
     const sensorIds = await insertMany(
       connection,
       'sensor',
-      ['id_vaga', 'tipo_sensor', 'estado_sensor', 'data_instalacao'],
+      ['id_vaga', 'tipo_sensor', 'estado_sensor'],
       sensorRows,
     );
 
@@ -594,8 +593,7 @@ async function main() {
         `
         UPDATE sensor s
         JOIN vaga v ON s.id_vaga = v.id_vaga
-        SET s.estado_sensor = 'OCUPADO',
-            s.ultima_atualizacao = CURRENT_TIMESTAMP
+        SET s.estado_sensor = 'OCUPADO'
         WHERE v.id_vaga IN (?)
         `,
         [[...occupiedVagaIds]],

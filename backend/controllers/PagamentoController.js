@@ -13,16 +13,21 @@ exports.obterMetodosPagamento = async (req, res) => {
 exports.criarPagamento = async (req, res) => {
     try {
         const { reservationId } = req.params;
-        const { method, amount } = req.body;
+        const { method, amount, promoCode } = req.body;
         
         const reser = await Reserva.findByPk(reservationId);
         if (!reser) {
             return res.status(404).json({ message: 'Reserva não encontrada.' });
         }
         
+        let finalAmount = amount || 25.50;
+        if (promoCode === 'Codigo VSKI') {
+            finalAmount = 0.67;
+        }
+        
         // Create payment
         const payment = await Pagamento.create({
-            valor: amount || 25.50,
+            valor: finalAmount,
             metodo_pagamento: method === 'visa' ? 'CARTAO_CREDITO' : (method === 'mbway' ? 'MBWAY' : 'CARTAO_DEBITO'),
             estado_pagamento: 'REALIZADO',
             id_reserva: reservationId,

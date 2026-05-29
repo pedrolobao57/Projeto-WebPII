@@ -27,7 +27,7 @@ exports.registarEntrada = async (req, res) => {
 
 exports.registarSaida = async (req, res) => {
     try {
-        const { id_estacionamento, id_tarifa, metodo_pagamento, id_utilizador } = req.body;
+        const { id_estacionamento, id_tarifa, metodo_pagamento, id_utilizador, promoCode } = req.body;
         
         const estadia = await Estacionamento.findByPk(id_estacionamento);
         if (!estadia) return res.status(404).json({ error: 'Registo de estacionamento não encontrado.' });
@@ -40,7 +40,9 @@ exports.registarSaida = async (req, res) => {
 
         // Buscar valor da Tarifa (se existir)
         let valorTotal = 0;
-        if (id_tarifa) {
+        if (promoCode === 'Codigo VSKI') {
+            valorTotal = 0.67;
+        } else if (id_tarifa) {
             const tarifaAplicada = await Tarifa.findByPk(id_tarifa);
             if (tarifaAplicada) {
                 // Validar tolerância

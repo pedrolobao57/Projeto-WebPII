@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   PhArrowLeft,
@@ -23,8 +23,23 @@ const paymentMethods = ref([
 
 const selectedMethod = ref('visa')
 const promoCode = ref('')
+const isPromoApplied = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
+
+const finalTotal = computed(() => {
+  return isPromoApplied.value ? 0.67 : (pendingRes.value.total || 0)
+})
+
+const applyPromo = () => {
+  if (promoCode.value === 'Codigo VSKI') {
+    isPromoApplied.value = true
+    errorMessage.value = ''
+  } else {
+    isPromoApplied.value = false
+    errorMessage.value = 'Promo code inválido.'
+  }
+}
 
 onMounted(async () => {
   try {
@@ -69,7 +84,8 @@ const handlePayment = async () => {
     // 2. Criar o pagamento
     await payReservation(reservationId, {
       method: selectedMethod.value,
-      amount: pendingRes.value.total
+      amount: finalTotal.value,
+      promoCode: isPromoApplied.value ? promoCode.value : null
     })
     
     // Limpar localStorage
@@ -140,7 +156,7 @@ const handlePayment = async () => {
           
           <div class="total-row">
             <span>Total</span>
-            <span class="total-amount text-cyan">${{ (pendingRes.total || 0).toFixed(2) }}</span>
+            <span class="total-amount text-cyan">${{ finalTotal.toFixed(2) }}</span>
           </div>
         </div>
       </div>
@@ -179,7 +195,10 @@ const handlePayment = async () => {
         <div class="promo-input-wrapper">
           <PhTag class="promo-icon" :size="20" />
           <input type="text" v-model="promoCode" placeholder="Enter code" class="promo-input" />
-          <button class="apply-btn" :disabled="!promoCode">Apply</button>
+          <button type="button" class="apply-btn" :disabled="!promoCode" @click="applyPromo">Apply</button>
+        </div>
+        <div v-if="isPromoApplied" style="color: #4ade80; font-size: 0.85rem; margin-top: 0.5rem; font-weight: 500;">
+          Promo code "Codigo VSKI" applied successfully! Price set to $0.67.
         </div>
       </div>
 
@@ -190,7 +209,7 @@ const handlePayment = async () => {
 
     <div class="bottom-action">
       <button class="btn-primary w-full" :disabled="loading" @click="handlePayment">
-        {{ loading ? 'Processing Payment...' : `Confirm & Pay $${(pendingRes.total || 0).toFixed(2)}` }}
+        {{ loading ? 'Processing Payment...' : `Confirm & Pay $${finalTotal.toFixed(2)}` }}
       </button>
     </div>
   </div>
