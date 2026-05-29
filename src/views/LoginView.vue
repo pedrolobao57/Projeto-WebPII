@@ -25,7 +25,7 @@ const handleLogin = async () => {
   errorMessage.value = ''
   try {
     const response = await loginUser({ email: email.value, password: password.value })
-    saveSession(response.token, response.user)
+    saveSession(response.token, response.refreshToken, response.user)
     router.push('/dashboard')
   } catch (err) {
     errorMessage.value = err.message || 'Invalid email or password.'

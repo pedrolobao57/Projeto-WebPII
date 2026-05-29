@@ -6,6 +6,7 @@ import { computed } from 'vue'
  */
 export function useAuth() {
   const token = computed(() => localStorage.getItem('token'))
+  const refreshToken = computed(() => localStorage.getItem('refreshToken'))
 
   const user = computed(() => {
     const stored = localStorage.getItem('user')
@@ -23,17 +24,29 @@ export function useAuth() {
    */
   function logout() {
     localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
     localStorage.removeItem('user')
     window.location.href = '/'
   }
 
   /**
-   * Persiste o token e o utilizador no localStorage após login/signup.
+   * Persiste o token, o refresh token e o utilizador no localStorage após login/signup.
    */
-  function saveSession(tokenValue, userValue) {
+  function saveSession(tokenValue, secondArg, thirdArg = null) {
+    let finalRefreshToken = null
+    let finalUser = secondArg
+
+    if (thirdArg !== null) {
+      finalRefreshToken = secondArg
+      finalUser = thirdArg
+    }
+
     localStorage.setItem('token', tokenValue)
-    localStorage.setItem('user', JSON.stringify(userValue))
+    if (finalRefreshToken) {
+      localStorage.setItem('refreshToken', finalRefreshToken)
+    }
+    localStorage.setItem('user', JSON.stringify(finalUser))
   }
 
-  return { token, user, isLoggedIn, logout, saveSession }
+  return { token, refreshToken, user, isLoggedIn, logout, saveSession }
 }

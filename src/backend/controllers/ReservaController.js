@@ -47,8 +47,8 @@ exports.criarReserva = async (req, res) => {
 
 exports.cancelarReserva = async (req, res) => {
     try {
-        const { id_reserva } = req.params;
-        const reserva = await Reserva.findByPk(id_reserva);
+        const { id } = req.params;
+        const reserva = await Reserva.findByPk(id);
         
         if (!reserva) return res.status(404).json({ error: 'Reserva não encontrada.' });
 

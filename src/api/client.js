@@ -25,6 +25,7 @@ async function request(method, path, body = null, params = null) {
 
   if (response.status === 401) {
     localStorage.removeItem('token')
+    localStorage.removeItem('refreshToken')
     window.location.href = '/'
     return
   }

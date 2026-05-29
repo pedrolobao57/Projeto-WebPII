@@ -59,7 +59,7 @@ const handleSignup = async () => {
 
     // 2. Login automático após registo
     const response = await loginUser({ email: form.value.email, password: form.value.password })
-    saveSession(response.token, response.user)
+    saveSession(response.token, response.refreshToken, response.user)
 
     router.push('/dashboard')
   } catch (err) {

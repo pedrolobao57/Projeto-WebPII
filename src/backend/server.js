@@ -9,6 +9,7 @@ const ParqueController = require('./controllers/ParqueController');
 const ReservaController = require('./controllers/ReservaController');
 const PagamentoController = require('./controllers/PagamentoController');
 const EstacionamentoController = require('./controllers/EstacionamentoController');
+const ManutencaoController = require('./controllers/ManutencaoController');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -53,6 +54,7 @@ app.get('/api/teste', async (req, res) => {
 // --- Auth Routes ---
 app.post('/users', UtilizadorController.signup);
 app.post('/users/login', UtilizadorController.login);
+app.post('/users/refresh', UtilizadorController.refreshToken);
 app.get('/users/me', authenticateToken, UtilizadorController.getProfile);
 app.patch('/users/me', authenticateToken, UtilizadorController.updateProfile);
 app.post('/users/me/change-password', authenticateToken, UtilizadorController.changePassword);
@@ -75,6 +77,10 @@ app.post('/reservations/:reservationId/payments', authenticateToken, PagamentoCo
 // --- Real-time Entry/Exit simulation ---
 app.post('/estacionamentos/entrada', EstacionamentoController.registarEntrada);
 app.post('/estacionamentos/saida', EstacionamentoController.registarSaida);
+
+// --- Maintenance Routes ---
+app.post('/maintenance/report', ManutencaoController.reportarAvaria);
+app.post('/maintenance/resolve', ManutencaoController.concluirReparacao);
 
 // Initialize DB and start server
 async function startServer() {

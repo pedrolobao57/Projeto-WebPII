@@ -1,0 +1,710 @@
+{
+  "info": {
+    "_postman_id": "4b54e3d3-1c39-4d69-b5fe-f018e7e1e69b",
+    "name": "ParkSmart API",
+    "description": "API collection for ParkSmart - Parking management system.\n\n### Authentication\nProtected requests inherit Bearer Token auth from the collection, using the `{{token}}` variable.\nWhen you call the **Login** request, a Postman script automatically saves the returned token into `{{token}}` so subsequent protected calls work seamlessly.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth & User",
+      "item": [
+        {
+          "name": "Sign Up",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"securepassword123\",\n  \"phone\": \"+351912345678\",\n  \"vehicles\": [\n    {\n      \"plate\": \"AA-00-BB\",\n      \"brand\": \"Tesla\",\n      \"model\": \"Model 3\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Registers a new user and optionally their vehicle(s)."
+          },
+          "response": []
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.token) {",
+                  "    pm.collectionVariables.set(\"token\", response.token);",
+                  "    if (response.refreshToken) {",
+                  "        pm.collectionVariables.set(\"refreshToken\", response.refreshToken);",
+                  "    }",
+                  "    pm.collectionVariables.set(\"userId\", response.user.id.toString());",
+                  "    if (response.user.vehicles && response.user.vehicles.length > 0) {",
+                  "        pm.collectionVariables.set(\"vehicleId\", response.user.vehicles[0].id_veiculo.toString());",
+                  "    }",
+                  "    console.log(\"Saved login token, refresh token, and user/vehicle details successfully!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"cliente.1@example.com\",\n  \"password\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "login"
+              ]
+            },
+            "description": "Authenticates user credentials. Returns an access token `fake-jwt-token-{id}` and a refresh token `fake-refresh-token-{id}` which are automatically saved to collection variables."
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.token) {",
+                  "    pm.collectionVariables.set(\"token\", response.token);",
+                  "    pm.collectionVariables.set(\"refreshToken\", response.refreshToken);",
+                  "    console.log(\"Tokens refreshed and updated successfully!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "refresh"
+              ]
+            },
+            "description": "Uses the refresh token to request a new access token."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Gets the profile details of the currently authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cliente Um Atualizado\",\n  \"email\": \"cliente.1@example.com\",\n  \"phone\": \"987654321\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Updates profile details for the authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password\",\n  \"newPassword\": \"password\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "change-password"
+              ]
+            },
+            "description": "Changes the current user's password."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Parks & Spots",
+      "item": [
+        {
+          "name": "List Parks",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parks"
+              ]
+            },
+            "description": "Retrieves the list of all parking structures with distance, pricing, and live occupied/available counts."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Park Details",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parks/{{parkId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parks",
+                "{{parkId}}"
+              ]
+            },
+            "description": "Retrieves information for a specific park, including location, name, total spots, and available spots."
+          },
+          "response": []
+        },
+        {
+          "name": "List Spots of Park",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/parks/{{parkId}}/spots",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "parks",
+                "{{parkId}}",
+                "spots"
+              ]
+            },
+            "description": "Lists all available parking zones and spots within a park, including their spot IDs, names, status (free, occupied, reserved), and vehicle type specifications."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reservations",
+      "item": [
+        {
+          "name": "Create Reservation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.novaReserva && response.novaReserva.id_reserva) {",
+                  "    pm.collectionVariables.set(\"reservationId\", response.novaReserva.id_reserva.toString());",
+                  "    pm.collectionVariables.set(\"spotId\", response.novaReserva.id_vaga.toString());",
+                  "    console.log(\"Saved reservationId and spotId to variables!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_vaga\": {{spotId}},\n  \"data_inicio\": \"2026-05-30T10:00:00.000Z\",\n  \"data_fim\": \"2026-05-30T12:00:00.000Z\",\n  \"id_veiculo\": {{vehicleId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations"
+              ]
+            },
+            "description": "Places a pending reservation on a parking spot. The spot's state will change to 'RESERVADO'."
+          },
+          "response": []
+        },
+        {
+          "name": "List Reservations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/reservations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "reservations"
+              ]
+            },
+            "description": "Lists all reservations belonging to the authenticated user."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Reservation Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}"
+              ]
+            },
+            "description": "Gets details of a specific reservation by ID."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Reservation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}"
+              ]
+            },
+            "description": "Cancels an existing reservation. Releases the associated spot back to 'LIVRE'."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Get Payment Methods",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me/payment-methods",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "payment-methods"
+              ]
+            },
+            "description": "Returns mockup payment options like Visa, Apple Pay, and MBWay."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"visa\",\n  \"amount\": 12.50\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/reservations/{{reservationId}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "reservations",
+                "{{reservationId}}",
+                "payments"
+              ]
+            },
+            "description": "Processes payment for a reservation. Validates/confirms the reservation and marks the spot as confirmed reserved."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Simulation",
+      "item": [
+        {
+          "name": "Register Entry (Barrier Simulation)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.entrada && response.entrada.id_estacionamento) {",
+                  "    pm.collectionVariables.set(\"estacionamentoId\", response.entrada.id_estacionamento.toString());",
+                  "    console.log(\"Saved simulated estacionamentoId to variables!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_veiculo\": {{vehicleId}},\n  \"id_vaga\": {{spotId}},\n  \"id_reserva\": {{reservationId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/estacionamentos/entrada",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "estacionamentos",
+                "entrada"
+              ]
+            },
+            "description": "Simulates a vehicle passing the entry barrier of the parking structure. Marks the designated spot as 'OCUPADO'."
+          },
+          "response": []
+        },
+        {
+          "name": "Register Exit (Barrier Simulation)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_estacionamento\": {{estacionamentoId}},\n  \"id_tarifa\": null,\n  \"metodo_pagamento\": \"MBWAY\",\n  \"id_utilizador\": {{userId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/estacionamentos/saida",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "estacionamentos",
+                "saida"
+              ]
+            },
+            "description": "Simulates a vehicle passing the exit barrier. Automatically calculates the duration, processes the exit payment, releases the spot back to 'LIVRE', and updates reservation status to 'CONCLUIDA'."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Maintenance",
+      "item": [
+        {
+          "name": "Report Sensor Malfunction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "if (response.alertaManutencao && response.alertaManutencao.id_manutencao) {",
+                  "    pm.collectionVariables.set(\"maintenanceId\", response.alertaManutencao.id_manutencao.toString());",
+                  "    console.log(\"Saved maintenanceId to variables!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_sensor\": {{sensorId}},\n  \"id_gestor\": 41,\n  \"descricao_problema\": \"Sensor failing to register occupied state correctly.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/maintenance/report",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "maintenance",
+                "report"
+              ]
+            },
+            "description": "Reports a sensor malfunction. Generates a maintenance request and sets the physical sensor hardware state to 'Avaria'."
+          },
+          "response": []
+        },
+        {
+          "name": "Conclude Sensor Repair",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_manutencao\": {{maintenanceId}},\n  \"custo_reparacao\": 45.00,\n  \"novo_estado_sensor\": \"LIVRE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/maintenance/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "maintenance",
+                "resolve"
+              ]
+            },
+            "description": "Records completion of a maintenance action. Sets status to 'Resolvido' and restores the sensor back to working status (e.g., 'LIVRE')."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Utility",
+      "item": [
+        {
+          "name": "API Connection Test",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/teste",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "teste"
+              ]
+            },
+            "description": "Tests connectivity between the API server and the underlying SQL database."
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "fake-jwt-token-1",
+      "type": "string"
+    },
+    {
+      "key": "refreshToken",
+      "value": "fake-refresh-token-1",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "vehicleId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "parkId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "spotId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "reservationId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "estacionamentoId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "sensorId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "maintenanceId",
+      "value": "1",
+      "type": "string"
+    }
+  ]
+}

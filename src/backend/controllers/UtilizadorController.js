@@ -106,6 +106,7 @@ exports.login = async (req, res) => {
 
         res.json({
             token: `fake-jwt-token-${user.id_utilizador}`,
+            refreshToken: `fake-refresh-token-${user.id_utilizador}`,
             user: formattedUser
         });
     } catch (err) {
@@ -205,5 +206,32 @@ exports.changePassword = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Erro ao alterar password.', error: err.message });
+    }
+};
+
+exports.refreshToken = async (req, res) => {
+    try {
+        const { refreshToken } = req.body;
+        if (!refreshToken) {
+            return res.status(400).json({ message: 'Refresh token é obrigatório.' });
+        }
+        
+        if (!refreshToken.startsWith('fake-refresh-token-')) {
+            return res.status(401).json({ message: 'Refresh token inválido.' });
+        }
+        
+        const userId = refreshToken.replace('fake-refresh-token-', '');
+        const user = await Utilizador.findByPk(userId);
+        if (!user) {
+            return res.status(401).json({ message: 'Utilizador não encontrado.' });
+        }
+        
+        res.json({
+            token: `fake-jwt-token-${user.id_utilizador}`,
+            refreshToken: `fake-refresh-token-${user.id_utilizador}`
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao renovar token.', error: err.message });
     }
 };

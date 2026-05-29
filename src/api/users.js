@@ -43,5 +43,8 @@ export const loginFakeUser = async () => {
   // Após garantir que o utilizador existe (criado ou já existente), tenta fazer login.
   const response = await loginUser({ email: fakeUser.email, password: fakeUser.password })
   localStorage.setItem('token', response.token)
+  if (response.refreshToken) {
+    localStorage.setItem('refreshToken', response.refreshToken)
+  }
   return response.user
 }
