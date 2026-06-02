@@ -1,8 +1,8 @@
-CREATE DATABASE IF NOT EXISTS estacionamento_inteligente1
+CREATE DATABASE IF NOT EXISTS Grupo12
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
-USE estacionamento_inteligente1;
+USE Grupo12;
 
 -- ==========================================================
 -- LIMPEZA DAS TABELAS
