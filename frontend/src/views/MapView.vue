@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { PhMagnifyingGlass, PhMapPin, PhList, PhCrosshair, PhPlus, PhMinus } from '@phosphor-icons/vue'
+import { PhMagnifyingGlass, PhMapPin, PhList, PhCrosshair, PhPlus, PhMinus, PhHouseLine, PhUser } from '@phosphor-icons/vue'
 import { getParks } from '../api/parks'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -223,10 +223,18 @@ const openDetails = (id) => {
   <div class="map-container">
     <div class="map-header">
       <div class="top-row">
-        <h2 class="brand">ParkSmart</h2>
-        <button class="profile-btn" @click="router.push('/profile')">
-          <PhMapPin :size="20" weight="fill" />
-        </button>
+        <h2 class="brand" @click="router.push('/dashboard')" style="cursor: pointer;">
+          <PhMapPin :size="20" color="var(--color-accent-cyan)" weight="fill" />
+          <span>ParkSmart</span>
+        </h2>
+        <div style="display: flex; gap: var(--spacing-2);">
+          <button class="profile-btn" @click="router.push('/dashboard')" title="Home">
+            <PhHouseLine :size="20" />
+          </button>
+          <button class="profile-btn" @click="router.push('/profile')" title="Profile">
+            <PhUser :size="20" weight="fill" />
+          </button>
+        </div>
       </div>
 
       <div class="search-bar">

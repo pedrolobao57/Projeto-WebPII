@@ -105,7 +105,9 @@ exports.listarReservas = async (req, res) => {
                 time: `${timeStart} - ${timeEnd} ${dateStr}`,
                 spotId: r.Vaga?.id_vaga.toString(),
                 spotNumber: r.Vaga?.numero_vaga || 'A-01',
-                vehiclePlate: r.Veiculo?.matricula || ''
+                vehiclePlate: r.Veiculo?.matricula || '',
+                data_inicio: r.data_inicio,
+                data_fim: r.data_fim
             };
         });
 

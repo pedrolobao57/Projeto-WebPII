@@ -59,9 +59,12 @@ const proceedToPayment = () => {
 
 <template>
   <div class="page-container">
-    <header class="header">
+    <header class="header justify-between">
       <button class="back-btn" @click="goBack">
         <PhArrowLeft :size="24" />
+      </button>
+      <button class="back-btn" @click="router.push('/dashboard')" title="Home">
+        <PhHouseLine :size="24" />
       </button>
     </header>
 

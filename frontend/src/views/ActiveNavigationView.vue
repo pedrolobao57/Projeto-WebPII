@@ -6,7 +6,8 @@ import {
   PhArrowUpRight,
   PhMapPin,
   PhQrCode,
-  PhCheckCircle
+  PhCheckCircle,
+  PhHouseLine
 } from '@phosphor-icons/vue'
 import { getReservation, getUserReservations } from '../api/reservations'
 
@@ -48,9 +49,12 @@ const arrive = () => {
 
 <template>
   <div class="navigation-container">
-    <header class="header transparent">
+    <header class="header transparent justify-between">
       <button class="back-btn" @click="goBack">
         <PhArrowLeft :size="24" />
+      </button>
+      <button class="back-btn" @click="router.push('/dashboard')" title="Home">
+        <PhHouseLine :size="24" />
       </button>
     </header>
 

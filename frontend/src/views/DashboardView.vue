@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { PhGear, PhArrowLeft, PhMapPin, PhCurrencyDollar, PhClock, PhQrCode, PhMedal } from '@phosphor-icons/vue'
 import { useAuth } from '../composables/useAuth'
 import { getUserReservations } from '../api/reservations'
+import { getParks } from '../api/parks'
 
 const router = useRouter()
 const { user } = useAuth()
@@ -16,6 +17,35 @@ const initials = computed(() => {
 })
 
 const reservations = ref([])
+const showSavedDetails = ref(false)
+const savedParks = ref([])
+
+const toggleSaved = () => {
+  showSavedDetails.value = !showSavedDetails.value
+}
+
+const thisMonthHours = computed(() => {
+  const now = new Date()
+  const currentMonth = now.getMonth()
+  const currentYear = now.getFullYear()
+  
+  let totalMinutes = 0
+  reservations.value.forEach(r => {
+    if (r.data_inicio && r.data_fim && r.status !== 'Cancelled') {
+      const start = new Date(r.data_inicio)
+      const end = new Date(r.data_fim)
+      if (start.getMonth() === currentMonth && start.getFullYear() === currentYear) {
+        const diffMs = end - start
+        if (diffMs > 0) {
+          totalMinutes += diffMs / (1000 * 60)
+        }
+      }
+    }
+  })
+  
+  const hours = totalMinutes / 60
+  return hours > 0 ? `${Math.round(hours)}h` : '0h'
+})
 
 onMounted(async () => {
   try {
@@ -23,6 +53,15 @@ onMounted(async () => {
     reservations.value = data
   } catch (err) {
     console.error('Erro ao carregar reservas:', err)
+  }
+
+  // Load favorite parks
+  try {
+    const allParks = await getParks()
+    const favIds = JSON.parse(localStorage.getItem('fav_parks') || '[]')
+    savedParks.value = allParks.filter(p => favIds.includes(Number(p.id)) || favIds.includes(p.id.toString()))
+  } catch (err) {
+    console.error('Erro ao carregar favoritos:', err)
   }
 })
 
@@ -77,7 +116,7 @@ const goToNav = (resId) => {
           <p>Active</p>
         </div>
         
-        <div class="stat-card bg-card radius-lg">
+        <div class="stat-card bg-card radius-lg" @click="toggleSaved">
           <div class="icon-wrapper green">
             <PhCurrencyDollar :size="20" weight="fill" />
           </div>
@@ -89,10 +128,55 @@ const goToNav = (resId) => {
           <div class="icon-wrapper blue">
             <PhClock :size="20" weight="fill" />
           </div>
-          <h3>42h</h3>
+          <h3>{{ thisMonthHours }}</h3>
           <p>This Month</p>
         </div>
       </div>
+
+      <!-- Expandable Savings Detail Card -->
+      <transition name="expand">
+        <div v-if="showSavedDetails" class="savings-detail-card bg-card radius-lg mb-6">
+          <div class="savings-header">
+            <h4><PhCurrencyDollar :size="20" weight="fill" class="text-green" /> Savings Breakdown</h4>
+            <button class="close-detail-btn" @click="showSavedDetails = false">&times;</button>
+          </div>
+          <div class="savings-body">
+            <div class="savings-row">
+              <span class="savings-label">🌟 Loyalty Points Discount</span>
+              <span class="savings-value text-green">-$25.00</span>
+            </div>
+            <div class="savings-row">
+              <span class="savings-label">⏱️ Off-Peak Bookings</span>
+              <span class="savings-value text-green">-$52.00</span>
+            </div>
+            <div class="savings-row">
+              <span class="savings-label">🎟️ Promo Codes Applied</span>
+              <span class="savings-value text-green">-$50.00</span>
+            </div>
+            <div class="divider"></div>
+            <div class="savings-row total-row">
+              <span class="savings-label">Total Money Saved</span>
+              <span class="savings-value text-cyan">$127.00</span>
+            </div>
+            
+            <div class="saved-parks-section">
+              <h5>❤️ My Saved Parks</h5>
+              <div v-if="savedParks.length === 0" class="no-parks text-secondary">
+                No favorite parks saved yet. You can favorite parks on their detail pages.
+              </div>
+              <div v-else class="saved-parks-list">
+                <div v-for="park in savedParks" :key="park.id" class="saved-park-item" @click="router.push(`/parking/${park.id}`)">
+                  <div class="park-info-left">
+                    <PhMapPin :size="16" class="text-cyan" />
+                    <span class="park-name">{{ park.name }}</span>
+                  </div>
+                  <span class="park-dist text-cyan">{{ park.price }}/h • {{ park.distance }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </transition>
 
       <div class="tabs">
         <button 
@@ -373,5 +457,149 @@ const goToNav = (resId) => {
   border-radius: var(--radius-full);
   font-weight: 600;
   font-size: 0.85rem;
+}
+
+.savings-detail-card {
+  padding: var(--spacing-4);
+  border: 1px solid var(--color-border);
+  transition: all 0.3s ease;
+}
+
+.savings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-4);
+}
+
+.savings-header h4 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.close-detail-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-detail-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.savings-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.savings-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.9rem;
+}
+
+.savings-label {
+  color: var(--color-text-secondary);
+}
+
+.savings-value {
+  font-weight: 600;
+}
+
+.text-green {
+  color: var(--color-status-free);
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-border);
+  margin: var(--spacing-2) 0;
+}
+
+.total-row {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.saved-parks-section {
+  margin-top: var(--spacing-6);
+  border-top: 1px dashed var(--color-border);
+  padding-top: var(--spacing-4);
+}
+
+.saved-parks-section h5 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: var(--spacing-3);
+  color: var(--color-text-primary);
+}
+
+.no-parks {
+  font-size: 0.85rem;
+}
+
+.saved-parks-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.saved-park-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-3);
+  background-color: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.saved-park-item:hover {
+  border-color: var(--color-accent-cyan);
+  transform: translateY(-1px);
+}
+
+.park-info-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.park-name {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.park-dist {
+  font-size: 0.8rem;
+}
+
+/* Animations */
+.expand-enter-active,
+.expand-leave-active {
+  transition: all 0.3s ease;
+  max-height: 400px;
+  opacity: 1;
+  overflow: hidden;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 </style>

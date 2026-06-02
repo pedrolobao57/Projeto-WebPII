@@ -24,7 +24,8 @@ mysql -u root < sql/schema.sql
 ## 2. Instalar dependências
 
 ```bash
-yarn install
+npm install --prefix backend
+npm install --prefix frontend
 ```
 
 ## 3. Configurar variáveis de ambiente
@@ -46,7 +47,7 @@ Depois ajusta os valores de ligação ao MySQL.
 ## 4. Gerar dados
 
 ```bash
-yarn seed
+npm run seed:b
 ```
 
 ## 5. Validar dados

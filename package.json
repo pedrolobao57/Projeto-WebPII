@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev:f": "yarn --cwd frontend dev",
-    "start:f": "yarn --cwd frontend build",
-    "start:b": "yarn --cwd backend start",
-    "seed:b": "yarn --cwd backend seed"
+    "dev:f": "npm run dev --prefix frontend",
+    "start:f": "npm run build --prefix frontend",
+    "start:b": "npm run start --prefix backend",
+    "seed:b": "npm run seed --prefix backend"
   }
 }

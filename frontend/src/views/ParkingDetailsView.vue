@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { PhArrowLeft, PhMapPin, PhLightning, PhShieldCheck, PhHouseLine, PhClock } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhMapPin, PhLightning, PhShieldCheck, PhHouseLine, PhClock, PhHeart } from '@phosphor-icons/vue'
 import { getParkDetails, getParkSpots } from '../api/parks'
 
 const router = useRouter()
@@ -19,6 +19,7 @@ const parkDetails = ref({
 })
 
 const levels = ref([])
+const isFavorite = ref(false)
 
 onMounted(async () => {
   try {
@@ -30,7 +31,24 @@ onMounted(async () => {
   } catch (err) {
     console.error('Erro ao carregar detalhes do parque:', err)
   }
+
+  // Load favorite status
+  const favs = JSON.parse(localStorage.getItem('fav_parks') || '[]')
+  isFavorite.value = favs.includes(Number(parkId)) || favs.includes(parkId.toString())
 })
+
+const toggleFavorite = () => {
+  let favs = JSON.parse(localStorage.getItem('fav_parks') || '[]')
+  const numericId = Number(parkId)
+  if (favs.includes(numericId)) {
+    favs = favs.filter(id => id !== numericId)
+    isFavorite.value = false
+  } else {
+    favs.push(numericId)
+    isFavorite.value = true
+  }
+  localStorage.setItem('fav_parks', JSON.stringify(favs))
+}
 
 const selectSpot = (spot) => {
   if (spot.status === 'free') {
@@ -41,10 +59,18 @@ const selectSpot = (spot) => {
 
 <template>
   <div class="page-container">
-    <header class="header">
+    <header class="header justify-between">
       <button class="back-btn" @click="goBack">
         <PhArrowLeft :size="24" />
       </button>
+      <div style="display: flex; gap: var(--spacing-2);">
+        <button class="back-btn" @click="toggleFavorite" :title="isFavorite ? 'Remove from Saved' : 'Save Park'">
+          <PhHeart :size="24" :weight="isFavorite ? 'fill' : 'regular'" :color="isFavorite ? 'var(--color-status-occupied)' : 'var(--color-text-primary)'" />
+        </button>
+        <button class="back-btn" @click="router.push('/dashboard')" title="Home">
+          <PhHouseLine :size="24" />
+        </button>
+      </div>
     </header>
 
     <main class="content">
