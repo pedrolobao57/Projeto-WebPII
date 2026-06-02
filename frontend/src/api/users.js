@@ -48,3 +48,9 @@ export const loginFakeUser = async () => {
   }
   return response.user
 }
+
+// POST /users/me/vehicles - Add a vehicle to the authenticated user's profile
+export const addVehicle = (vehicleData) => {
+  return apiClient.post('/users/me/vehicles', vehicleData)
+}
+

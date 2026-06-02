@@ -233,6 +233,35 @@
             "description": "Changes the current user's password."
           },
           "response": []
+        },
+        {
+          "name": "Add Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"CC-99-DD\",\n  \"brand\": \"BMW\",\n  \"model\": \"i4\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "vehicles"
+              ]
+            },
+            "description": "Registers a new vehicle to the authenticated user's profile."
+          },
+          "response": []
         }
       ]
     },

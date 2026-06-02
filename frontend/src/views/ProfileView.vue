@@ -18,6 +18,11 @@ import {
 } from '@phosphor-icons/vue'
 import { useAuth } from '../composables/useAuth'
 import apiClient from '../api/client'
+import brands from '../api/brands'
+
+const ALLOWED_BRANDS = brands
+const ALLOWED_COLORS = ['Preto', 'Branco', 'Cinza', 'Vermelho', 'Azul', 'Verde', 'Amarelo', 'Outro']
+
 
 const router = useRouter()
 const { user, logout } = useAuth()
@@ -101,6 +106,57 @@ const handlePasswordChange = async () => {
     passwordError.value = err.message || 'Erro ao alterar password.'
   } finally {
     passwordLoading.value = false
+  }
+}
+
+const showVehicleModal = ref(false)
+const vehiclePlate = ref('')
+const vehicleBrand = ref('')
+const vehicleModel = ref('')
+const vehicleColor = ref('')
+const vehicleError = ref('')
+const vehicleSuccess = ref('')
+const vehicleLoading = ref(false)
+
+const handleAddVehicle = async () => {
+  if (!vehiclePlate.value) {
+    vehicleError.value = 'A matrícula é obrigatória.'
+    return
+  }
+  
+  vehicleLoading.value = true
+  vehicleError.value = ''
+  vehicleSuccess.value = ''
+  
+  try {
+    const newVehicle = await apiClient.post('/users/me/vehicles', {
+      plate: vehiclePlate.value,
+      brand: vehicleBrand.value,
+      model: vehicleModel.value,
+      color: vehicleColor.value
+    })
+    
+    if (!localUser.value.vehicles) {
+      localUser.value.vehicles = []
+    }
+    localUser.value.vehicles.push(newVehicle)
+    
+    localStorage.setItem('user', JSON.stringify(localUser.value))
+    
+    vehicleSuccess.value = 'Veículo adicionado com sucesso!'
+    vehiclePlate.value = ''
+    vehicleBrand.value = ''
+    vehicleModel.value = ''
+    vehicleColor.value = ''
+    
+    setTimeout(() => {
+      showVehicleModal.value = false
+      vehicleSuccess.value = ''
+    }, 1500)
+  } catch (err) {
+    vehicleError.value = err.message || 'Erro ao adicionar veículo.'
+  } finally {
+    vehicleLoading.value = false
   }
 }
 
@@ -255,22 +311,27 @@ const handleSignOut = () => {
 
       <!-- Vehicles Tab Panel -->
       <div v-if="activeTab === 'vehicles'" class="settings-section">
-        <h3 class="section-title">My Vehicles</h3>
+        <div class="vehicles-header">
+          <h3 class="section-title">My Vehicles</h3>
+          <button class="add-vehicle-trigger-btn" @click="showVehicleModal = true">
+            + Add Vehicle
+          </button>
+        </div>
         <div class="settings-card bg-card radius-lg">
-          <div v-if="!user?.vehicles || user.vehicles.length === 0" class="setting-item">
+          <div v-if="!localUser?.vehicles || localUser.vehicles.length === 0" class="setting-item">
             <span class="value text-secondary">No vehicles registered yet.</span>
           </div>
-          <template v-else v-for="(v, index) in user.vehicles" :key="index">
+          <template v-else v-for="(v, index) in localUser.vehicles" :key="index">
             <div class="setting-item">
               <div class="setting-icon">
                 <PhCar :size="20" class="text-secondary" />
               </div>
               <div class="setting-content">
-                <span class="label">{{ v.brand }} {{ v.model }}</span>
+                <span class="label">{{ v.brand || 'Unknown Brand' }} {{ v.model || 'Unknown Model' }}<span v-if="v.color"> ({{ v.color }})</span></span>
                 <span class="value">{{ v.plate }}</span>
               </div>
             </div>
-            <div v-if="index < user.vehicles.length - 1" class="divider"></div>
+            <div v-if="index < localUser.vehicles.length - 1" class="divider"></div>
           </template>
         </div>
       </div>
@@ -392,6 +453,54 @@ const handleSignOut = () => {
             <button type="button" class="btn-secondary" @click="showPasswordModal = false">Cancel</button>
             <button type="submit" class="btn-primary" :disabled="passwordLoading">
               {{ passwordLoading ? 'Changing...' : 'Change Password' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Vehicle Modal -->
+    <div v-if="showVehicleModal" class="modal-overlay" @click.self="showVehicleModal = false">
+      <div class="modal-card bg-card radius-lg animate-fade-in">
+        <h3 class="modal-title">Add Vehicle</h3>
+        
+        <div v-if="vehicleError" class="error-banner mb-3">{{ vehicleError }}</div>
+        <div v-if="vehicleSuccess" class="success-banner mb-3">{{ vehicleSuccess }}</div>
+        
+        <form @submit.prevent="handleAddVehicle" class="modal-form">
+          <div class="form-group">
+            <label class="form-label">License Plate *</label>
+            <input type="text" v-model="vehiclePlate" placeholder="e.g. AA-00-AA" class="modal-input" required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Brand</label>
+            <select v-model="vehicleBrand" class="modal-select">
+              <option value="" disabled>Select a brand</option>
+              <option v-for="brand in ALLOWED_BRANDS" :key="brand" :value="brand">
+                {{ brand }}
+              </option>
+            </select>
+          </div>
+          <div class="row">
+            <div class="form-group half">
+              <label class="form-label">Model</label>
+              <input type="text" v-model="vehicleModel" placeholder="e.g. Model 3" class="modal-input" />
+            </div>
+            <div class="form-group half">
+              <label class="form-label">Color</label>
+              <select v-model="vehicleColor" class="modal-select">
+                <option value="" disabled>Select color</option>
+                <option v-for="color in ALLOWED_COLORS" :key="color" :value="color">
+                  {{ color }}
+                </option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="modal-actions">
+            <button type="button" class="btn-secondary" @click="showVehicleModal = false">Cancel</button>
+            <button type="submit" class="btn-primary" :disabled="vehicleLoading">
+              {{ vehicleLoading ? 'Adding...' : 'Add Vehicle' }}
             </button>
           </div>
         </form>
@@ -761,4 +870,59 @@ const handleSignOut = () => {
   background: var(--color-border);
   border-radius: 2px;
 }
+
+/* Vehicles Header Styles */
+.vehicles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-3);
+}
+.vehicles-header .section-title {
+  margin-bottom: 0;
+}
+.add-vehicle-trigger-btn {
+  background-color: transparent;
+  border: 1px solid var(--color-accent-cyan);
+  color: var(--color-accent-cyan);
+  padding: 0.4rem 0.8rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.add-vehicle-trigger-btn:hover {
+  background-color: var(--color-accent-cyan);
+  color: var(--color-bg-base);
+}
+
+.modal-select {
+  width: 100%;
+  background-color: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+  color: var(--color-text-primary);
+  font-size: 0.95rem;
+  outline: none;
+  box-sizing: border-box;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1em;
+}
+.modal-select:focus {
+  border-color: var(--color-accent-cyan);
+}
+
+.row {
+  display: flex;
+  gap: var(--spacing-4);
+}
+.half {
+  flex: 1;
+}
 </style>
+

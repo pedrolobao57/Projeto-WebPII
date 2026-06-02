@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev:f": "yarn --cwd frontend dev",
-    "build:f": "yarn --cwd frontend build",
+    "start:f": "yarn --cwd frontend build",
     "start:b": "yarn --cwd backend start",
     "seed:b": "yarn --cwd backend seed"
   }

@@ -44,7 +44,8 @@ exports.signup = async (req, res) => {
                         id_utilizador: user.id_utilizador,
                         matricula: v.plate,
                         marca: v.brand,
-                        modelo: v.model
+                        modelo: v.model,
+                        cor: v.color
                     });
                     createdVehicles.push(veiculo);
                 }
@@ -60,7 +61,8 @@ exports.signup = async (req, res) => {
                 id_veiculo: v.id_veiculo,
                 plate: v.matricula,
                 brand: v.marca,
-                model: v.modelo
+                model: v.modelo,
+                color: v.cor
             }))
         });
     } catch (err) {
@@ -100,7 +102,8 @@ exports.login = async (req, res) => {
                 id_veiculo: v.id_veiculo,
                 plate: v.matricula,
                 brand: v.marca,
-                model: v.modelo
+                model: v.modelo,
+                color: v.cor
             }))
         };
 
@@ -135,7 +138,8 @@ exports.getProfile = async (req, res) => {
                 id_veiculo: v.id_veiculo,
                 plate: v.matricula,
                 brand: v.marca,
-                model: v.modelo
+                model: v.modelo,
+                color: v.cor
             }))
         });
     } catch (err) {
@@ -169,7 +173,8 @@ exports.updateProfile = async (req, res) => {
                 id_veiculo: v.id_veiculo,
                 plate: v.matricula,
                 brand: v.marca,
-                model: v.modelo
+                model: v.modelo,
+                color: v.cor
             }))
         });
     } catch (err) {
@@ -235,3 +240,41 @@ exports.refreshToken = async (req, res) => {
         res.status(500).json({ message: 'Erro ao renovar token.', error: err.message });
     }
 };
+
+exports.adicionarVeiculo = async (req, res) => {
+    try {
+        const userId = req.user.id_utilizador;
+        const { plate, brand, model, color } = req.body;
+
+        if (!plate) {
+            return res.status(400).json({ message: 'A matrícula é obrigatória.' });
+        }
+
+        // Duplication check (case-insensitive or exact, database constraint is unique so search is exact)
+        const existingVehicle = await Veiculo.findOne({ where: { matricula: plate } });
+        if (existingVehicle) {
+            return res.status(400).json({ message: 'Esta matrícula já está registada.' });
+        }
+
+        // Create vehicle
+        const vehicle = await Veiculo.create({
+            id_utilizador: userId,
+            matricula: plate,
+            marca: brand || '',
+            modelo: model || '',
+            cor: color || ''
+        });
+
+        res.status(201).json({
+            id_veiculo: vehicle.id_veiculo,
+            plate: vehicle.matricula,
+            brand: vehicle.marca,
+            model: vehicle.modelo,
+            color: vehicle.cor
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao adicionar veículo.', error: err.message });
+    }
+};
+

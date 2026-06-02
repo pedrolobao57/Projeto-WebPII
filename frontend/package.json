@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@faker-js/faker": "^10.4.0",
     "@phosphor-icons/vue": "^2.2.1",
     "leaflet": "^1.9.4",
     "vue": "^3.5.31",

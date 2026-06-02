@@ -58,6 +58,8 @@ app.post('/users/refresh', UtilizadorController.refreshToken);
 app.get('/users/me', authenticateToken, UtilizadorController.getProfile);
 app.patch('/users/me', authenticateToken, UtilizadorController.updateProfile);
 app.post('/users/me/change-password', authenticateToken, UtilizadorController.changePassword);
+app.post('/users/me/vehicles', authenticateToken, UtilizadorController.adicionarVeiculo);
+
 
 // --- Parks & Spots Routes ---
 app.get('/parks', ParqueController.listarParques);

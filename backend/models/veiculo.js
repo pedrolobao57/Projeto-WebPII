@@ -7,6 +7,7 @@ const Veiculo = sequelize.define('Veiculo', {
     matricula: { type: DataTypes.STRING(15), allowNull: false, unique: true },
     marca: { type: DataTypes.STRING(50) },
     modelo: { type: DataTypes.STRING(50) },
+    cor: { type: DataTypes.STRING(50) },
     id_utilizador: { type: DataTypes.INTEGER, references: { model: Utilizador, key: 'id_utilizador' } }
 }, { tableName: 'veiculo', timestamps: false });
 
