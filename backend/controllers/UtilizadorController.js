@@ -38,11 +38,20 @@ exports.signup = async (req, res) => {
         // Create vehicles if present
         const createdVehicles = [];
         if (vehicles && Array.isArray(vehicles)) {
+            const plateRegex = /^(?:[A-Z]{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-[A-Z]{2}|[A-Z]{2}-\d{2}-\d{2}|\d{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-\d{2})$/;
             for (const v of vehicles) {
                 if (v.plate) {
+                    const normalizedPlate = v.plate.trim().toUpperCase();
+                    if (!plateRegex.test(normalizedPlate)) {
+                        return res.status(400).json({ message: 'Matrícula não identificada.' });
+                    }
+                    const existingVehicle = await Veiculo.findOne({ where: { matricula: normalizedPlate } });
+                    if (existingVehicle) {
+                        return res.status(400).json({ message: 'Esta matrícula já está registada.' });
+                    }
                     const veiculo = await Veiculo.create({
                         id_utilizador: user.id_utilizador,
-                        matricula: v.plate,
+                        matricula: normalizedPlate,
                         marca: v.brand,
                         modelo: v.model,
                         cor: v.color
@@ -254,8 +263,14 @@ exports.adicionarVeiculo = async (req, res) => {
             return res.status(400).json({ message: 'A matrícula é obrigatória.' });
         }
 
+        const normalizedPlate = plate.trim().toUpperCase();
+        const plateRegex = /^(?:[A-Z]{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-[A-Z]{2}|[A-Z]{2}-\d{2}-\d{2}|\d{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-\d{2})$/;
+        if (!plateRegex.test(normalizedPlate)) {
+            return res.status(400).json({ message: 'Matrícula não identificada.' });
+        }
+
         // Duplication check (case-insensitive or exact, database constraint is unique so search is exact)
-        const existingVehicle = await Veiculo.findOne({ where: { matricula: plate } });
+        const existingVehicle = await Veiculo.findOne({ where: { matricula: normalizedPlate } });
         if (existingVehicle) {
             return res.status(400).json({ message: 'Esta matrícula já está registada.' });
         }
@@ -263,7 +278,7 @@ exports.adicionarVeiculo = async (req, res) => {
         // Create vehicle
         const vehicle = await Veiculo.create({
             id_utilizador: userId,
-            matricula: plate,
+            matricula: normalizedPlate,
             marca: brand || '',
             modelo: model || '',
             cor: color || ''

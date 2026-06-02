@@ -59,6 +59,36 @@
           "response": []
         },
         {
+          "name": "Sign Up (Invalid Plate)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"password\": \"securepassword123\",\n  \"phone\": \"+351912345678\",\n  \"vehicles\": [\n    {\n      \"plate\": \"AA-123-BB\",\n      \"brand\": \"Tesla\",\n      \"model\": \"Model 3\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "description": "Attempt to sign up with an invalid plate format. Should fail with HTTP 400 and message 'Matrícula não identificada.'"
+          },
+          "response": []
+        },
+        {
           "name": "Login",
           "event": [
             {
@@ -260,6 +290,35 @@
               ]
             },
             "description": "Registers a new vehicle to the authenticated user's profile."
+          },
+          "response": []
+        },
+        {
+          "name": "Add Vehicle (Invalid Plate)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"plate\": \"AA-123-BB\",\n  \"brand\": \"BMW\",\n  \"model\": \"i4\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/users/me/vehicles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me",
+                "vehicles"
+              ]
+            },
+            "description": "Attempt to add a vehicle with an invalid plate format. Should fail with HTTP 400 and message 'Matrícula não identificada.'"
           },
           "response": []
         }
