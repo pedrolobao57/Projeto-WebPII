@@ -16,6 +16,11 @@ const loading = ref(false)
 const goBack = () => router.back()
 const goToSignup = () => router.push('/signup')
 
+const fillCredentials = (demoEmail, demoPassword) => {
+  email.value = demoEmail
+  password.value = demoPassword
+}
+
 const handleLogin = async () => {
   if (!email.value || !password.value) {
     errorMessage.value = 'Please fill in all fields.'
@@ -100,6 +105,20 @@ const handleLogin = async () => {
         Don't have an account?
         <a href="#" @click.prevent="goToSignup">Create one</a>
       </p>
+
+      <!-- Demo Credentials Helper -->
+      <div class="demo-section bg-card radius-lg">
+        <h3 class="demo-title">🔑 Quick Demo Login</h3>
+        <div class="demo-buttons">
+          <button type="button" class="demo-btn-item" @click="fillCredentials('cliente.1@example.com', 'password')">
+            <strong>Client:</strong> cliente.1@example.com
+          </button>
+          <button type="button" class="demo-btn-item" @click="fillCredentials('gestor.1@example.com', 'password')">
+            <strong>Manager:</strong> gestor.1@example.com
+          </button>
+        </div>
+        <p class="demo-hint">Password: <code>password</code></p>
+      </div>
     </main>
   </div>
 </template>
@@ -252,5 +271,56 @@ h1 {
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.demo-section {
+  margin-top: var(--spacing-6);
+  padding: var(--spacing-4);
+  border: 1px dashed var(--color-border);
+  text-align: center;
+}
+
+.demo-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin-bottom: var(--spacing-3);
+  color: var(--color-text-primary);
+}
+
+.demo-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-2);
+}
+
+.demo-btn-item {
+  background-color: var(--color-bg-base);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  padding: 0.6rem;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.demo-btn-item:hover {
+  border-color: var(--color-accent-cyan);
+  color: var(--color-text-primary);
+  background-color: var(--color-bg-card-hover);
+}
+
+.demo-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.demo-hint code {
+  color: var(--color-accent-cyan);
+  background-color: rgba(0, 212, 255, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: var(--radius-sm);
 }
 </style>

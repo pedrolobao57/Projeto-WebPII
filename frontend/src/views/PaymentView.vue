@@ -11,8 +11,11 @@ import {
 } from '@phosphor-icons/vue'
 import { createReservation } from '../api/reservations'
 import { payReservation, getPaymentMethods } from '../api/payments'
+import { useAuth } from '../composables/useAuth'
+import { getUserProfile } from '../api/users'
 
 const router = useRouter()
+const { user } = useAuth()
 
 const pendingRes = ref(JSON.parse(localStorage.getItem('pending_reservation') || '{}'))
 
@@ -27,9 +30,26 @@ const promoCode = ref('')
 const isPromoApplied = ref(false)
 const loading = ref(false)
 const errorMessage = ref('')
+const useLoyaltyPoints = ref(false)
+
+const userLoyaltyPoints = computed(() => user.value?.loyaltyPoints || 0)
+
+const maxPointsDiscount = computed(() => {
+  const baseAmount = isPromoApplied.value ? 0.67 : (pendingRes.value.total || 0)
+  return Math.min(userLoyaltyPoints.value / 100, baseAmount)
+})
+
+const pointsDiscount = computed(() => {
+  return useLoyaltyPoints.value ? maxPointsDiscount.value : 0
+})
+
+const pointsToUse = computed(() => {
+  return Math.floor(pointsDiscount.value * 100)
+})
 
 const finalTotal = computed(() => {
-  return isPromoApplied.value ? 0.67 : (pendingRes.value.total || 0)
+  const baseAmount = isPromoApplied.value ? 0.67 : (pendingRes.value.total || 0)
+  return Math.max(0, baseAmount - pointsDiscount.value)
 })
 
 const applyPromo = () => {
@@ -55,6 +75,14 @@ onMounted(async () => {
     }
   } catch (err) {
     console.error('Erro ao buscar metodos de pagamento:', err)
+  }
+
+  // Refresh user profile details to get latest loyalty points
+  try {
+    const profile = await getUserProfile()
+    localStorage.setItem('user', JSON.stringify(profile))
+  } catch (err) {
+    console.error('Erro ao buscar perfil atualizado:', err)
   }
 })
 
@@ -83,11 +111,18 @@ const handlePayment = async () => {
     const reservationId = resResponse.novaReserva.id_reserva
     
     // 2. Criar o pagamento
-    await payReservation(reservationId, {
+    const payResponse = await payReservation(reservationId, {
       method: selectedMethod.value,
       amount: finalTotal.value,
-      promoCode: isPromoApplied.value ? promoCode.value : null
+      promoCode: isPromoApplied.value ? promoCode.value : null,
+      useLoyaltyPoints: useLoyaltyPoints.value
     })
+    
+    // Sync newly updated user loyalty points balance to local session
+    if (payResponse && payResponse.loyaltyPoints !== undefined) {
+      const updatedUser = { ...user.value, loyaltyPoints: payResponse.loyaltyPoints }
+      localStorage.setItem('user', JSON.stringify(updatedUser))
+    }
     
     // Limpar localStorage
     localStorage.removeItem('pending_reservation')
@@ -156,6 +191,10 @@ const handlePayment = async () => {
               <span class="label">Service fee</span>
               <span class="value">$1.50</span>
             </div>
+            <div v-if="pointsDiscount > 0" class="detail-row text-cyan-row">
+              <span class="label text-cyan">🌟 Loyalty Discount</span>
+              <span class="value text-cyan">-${{ pointsDiscount.toFixed(2) }}</span>
+            </div>
           </div>
           
           <div class="total-row">
@@ -191,6 +230,25 @@ const handlePayment = async () => {
             <PhPlus :size="20" class="text-cyan" />
             <span>Add New Card</span>
           </button>
+        </div>
+      </div>
+
+      <div v-if="userLoyaltyPoints > 0" class="section">
+        <h3 class="section-title">Loyalty Points</h3>
+        <div class="loyalty-redeem-card bg-card radius-lg">
+          <div class="loyalty-redeem-content">
+            <div class="loyalty-info-left">
+              <span class="star-icon">🌟</span>
+              <div class="loyalty-text">
+                <span class="loyalty-pts-title">Use Loyalty Points</span>
+                <span class="loyalty-pts-subtitle">You have {{ userLoyaltyPoints }} points. Use {{ pointsToUse }} points for a ${{ pointsDiscount.toFixed(2) }} discount.</span>
+              </div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" v-model="useLoyaltyPoints" />
+              <span class="slider round"></span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -459,5 +517,93 @@ h1 {
 
 .w-full {
   width: 100%;
+}
+
+.loyalty-redeem-card {
+  padding: 1rem;
+  border: 1px solid var(--color-border);
+}
+
+.loyalty-redeem-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.loyalty-info-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.star-icon {
+  font-size: 1.5rem;
+}
+
+.loyalty-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.loyalty-pts-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.loyalty-pts-subtitle {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.text-cyan-row {
+  color: var(--color-accent-cyan);
+  font-weight: 500;
+}
+
+/* Switch styling */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch input { 
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--color-border);
+  transition: .4s;
+  border-radius: 24px;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: var(--color-accent-cyan);
+}
+
+input:checked + .slider:before {
+  transform: translateX(20px);
 }
 </style>

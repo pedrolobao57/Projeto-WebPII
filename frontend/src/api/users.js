@@ -54,3 +54,9 @@ export const addVehicle = (vehicleData) => {
   return apiClient.post('/users/me/vehicles', vehicleData)
 }
 
+// GET /users/me - Get current user profile
+export const getUserProfile = () => {
+  return apiClient.get('/users/me')
+}
+
+

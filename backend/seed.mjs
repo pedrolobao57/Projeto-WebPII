@@ -247,6 +247,7 @@ async function main() {
         faker.phone.number(),
         '$2b$10$demo.hash.password.not.for.production',
         'CLIENTE',
+        faker.number.int({ min: 100, max: 2000 })
       ]);
     }
 
@@ -259,13 +260,14 @@ async function main() {
         faker.phone.number(),
         '$2b$10$demo.hash.password.not.for.production',
         'GESTOR',
+        0
       ]);
     }
 
     const userIds = await insertMany(
       connection,
       'utilizador',
-      ['nome', 'email', 'telefone', 'palavra_passe', 'tipo_utilizador'],
+      ['nome', 'email', 'telefone', 'palavra_passe', 'tipo_utilizador', 'pontos_fidelidade'],
       userRows,
     );
 

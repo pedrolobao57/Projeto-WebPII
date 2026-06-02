@@ -5,6 +5,7 @@ import { PhGear, PhArrowLeft, PhMapPin, PhCurrencyDollar, PhClock, PhQrCode, PhM
 import { useAuth } from '../composables/useAuth'
 import { getUserReservations } from '../api/reservations'
 import { getParks } from '../api/parks'
+import { getUserProfile } from '../api/users'
 
 const router = useRouter()
 const { user } = useAuth()
@@ -63,7 +64,21 @@ onMounted(async () => {
   } catch (err) {
     console.error('Erro ao carregar favoritos:', err)
   }
+
+  // Refresh user profile details to get latest loyalty points
+  try {
+    const profile = await getUserProfile()
+    localStorage.setItem('user', JSON.stringify(profile))
+  } catch (err) {
+    console.error('Erro ao buscar perfil atualizado:', err)
+  }
 })
+
+const userLoyaltyPoints = computed(() => user.value?.loyaltyPoints || 0)
+
+const showRedeemInfo = () => {
+  alert(`🌟 Loyalty Points: ${userLoyaltyPoints.value}\n\nYou can use your points at checkout to receive a discount on your next reservation!\n\nRate: 100 points = $1.00 discount.`)
+}
 
 const filteredReservations = computed(() => {
   if (activeTab.value === 'upcoming') {
@@ -216,15 +231,15 @@ const goToNav = (resId) => {
       </div>
     </main>
 
-    <div class="loyalty-banner">
+    <div v-if="userLoyaltyPoints > 0" class="loyalty-banner">
       <div class="banner-content">
         <PhMedal :size="24" />
         <div class="banner-text">
           <h4>Loyalty Points</h4>
-          <p>You have 1,240 points</p>
+          <p>You have {{ userLoyaltyPoints }} points</p>
         </div>
       </div>
-      <button class="redeem-btn">Redeem</button>
+      <button class="redeem-btn" @click="showRedeemInfo">Redeem</button>
     </div>
   </div>
 </template>

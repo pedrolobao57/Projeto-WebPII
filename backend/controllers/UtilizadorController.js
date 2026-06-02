@@ -57,6 +57,7 @@ exports.signup = async (req, res) => {
             name: user.nome,
             email: user.email,
             phone: user.telefone,
+            loyaltyPoints: user.pontos_fidelidade,
             vehicles: createdVehicles.map(v => ({
                 id_veiculo: v.id_veiculo,
                 plate: v.matricula,
@@ -98,6 +99,7 @@ exports.login = async (req, res) => {
             name: user.nome,
             email: user.email,
             phone: user.telefone,
+            loyaltyPoints: user.pontos_fidelidade,
             vehicles: (user.Veiculos || []).map(v => ({
                 id_veiculo: v.id_veiculo,
                 plate: v.matricula,
@@ -134,6 +136,7 @@ exports.getProfile = async (req, res) => {
             name: user.nome,
             email: user.email,
             phone: user.telefone,
+            loyaltyPoints: user.pontos_fidelidade,
             vehicles: (user.Veiculos || []).map(v => ({
                 id_veiculo: v.id_veiculo,
                 plate: v.matricula,
@@ -169,6 +172,7 @@ exports.updateProfile = async (req, res) => {
             name: user.nome,
             email: user.email,
             phone: user.telefone,
+            loyaltyPoints: user.pontos_fidelidade,
             vehicles: (user.Veiculos || []).map(v => ({
                 id_veiculo: v.id_veiculo,
                 plate: v.matricula,

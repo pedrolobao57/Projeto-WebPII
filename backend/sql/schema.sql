@@ -30,6 +30,7 @@ CREATE TABLE utilizador (
     telefone VARCHAR(40),
     palavra_passe VARCHAR(255) NOT NULL,
     tipo_utilizador ENUM('CLIENTE', 'GESTOR', 'ADMIN') NOT NULL DEFAULT 'CLIENTE',
+    pontos_fidelidade INT NOT NULL DEFAULT 0,
     data_registo DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT chk_email_utilizador
