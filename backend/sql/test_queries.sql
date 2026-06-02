@@ -1,4 +1,4 @@
-USE estacionamento_inteligente1;
+USE Grupo12;
 
 SELECT COUNT(*) AS total_utilizadores FROM utilizador;
 SELECT COUNT(*) AS total_veiculos FROM veiculo;
