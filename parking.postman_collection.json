@@ -372,6 +372,32 @@
         },
         {
           "name": "List Spots of Park",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const response = pm.response.json();",
+                  "let foundFreeSpot = false;",
+                  "for (const zone of response) {",
+                  "    if (zone.spots && zone.spots.length > 0) {",
+                  "        const freeSpot = zone.spots.find(s => s.status === 'free');",
+                  "        if (freeSpot) {",
+                  "            pm.collectionVariables.set(\"spotId\", freeSpot.id.toString());",
+                  "            console.log(\"Saved free spotId to variables:\", freeSpot.id);",
+                  "            foundFreeSpot = true;",
+                  "            break;",
+                  "        }",
+                  "    }",
+                  "}",
+                  "if (!foundFreeSpot) {",
+                  "    console.log(\"No free spots found in this park!\");",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "auth": {
               "type": "noauth"
@@ -421,7 +447,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id_vaga\": {{spotId}},\n  \"data_inicio\": \"2026-05-30T10:00:00.000Z\",\n  \"data_fim\": \"2026-05-30T12:00:00.000Z\",\n  \"id_veiculo\": {{vehicleId}}\n}",
+              "raw": "{\n  \"id_vaga\": \"{{spotId}}\",\n  \"data_inicio\": \"2026-05-30T10:00:00.000Z\",\n  \"data_fim\": \"2026-05-30T12:00:00.000Z\",\n  \"id_veiculo\": \"{{vehicleId}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
