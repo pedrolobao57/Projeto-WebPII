@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const Reserva = require('../models/reserva');
 const Vaga = require('../models/vaga');
 const Veiculo = require('../models/veiculo');
@@ -9,10 +10,33 @@ exports.criarReserva = async (req, res) => {
         const { id_vaga, data_inicio, data_fim, id_veiculo } = req.body;
         const id_utilizador = req.user.id_utilizador;
 
-        // 1. Verificar se a vaga está livre
+        // 1. Verificar se a vaga existe e não está indisponível
         const vaga = await Vaga.findByPk(id_vaga);
-        if (!vaga || vaga.estado !== 'LIVRE') {
+        if (!vaga || vaga.estado === 'INDISPONIVEL') {
             return res.status(400).json({ error: 'A vaga selecionada não está disponível para reserva.' });
+        }
+
+        // Verificar se já existe uma reserva ativa (PENDENTE ou CONFIRMADA) para a mesma vaga no mesmo período
+        const dataInicioDate = new Date(data_inicio);
+        const dataFimDate = new Date(data_fim);
+
+        const reservaExistente = await Reserva.findOne({
+            where: {
+                id_vaga,
+                estado_reserva: {
+                    [Op.in]: ['PENDENTE', 'CONFIRMADA']
+                },
+                data_inicio: {
+                    [Op.lt]: dataFimDate
+                },
+                data_fim: {
+                    [Op.gt]: dataInicioDate
+                }
+            }
+        });
+
+        if (reservaExistente) {
+            return res.status(400).json({ error: 'A vaga selecionada já está reservada para o período pretendido.' });
         }
 
         // 2. Determinar id_veiculo se não enviado
