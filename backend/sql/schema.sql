@@ -8,6 +8,8 @@ USE Grupo12;
 -- LIMPEZA DAS TABELAS
 -- ==========================================================
 
+SET FOREIGN_KEY_CHECKS = 0;
+
 DROP TABLE IF EXISTS leitura_sensor;
 DROP TABLE IF EXISTS pagamento;
 DROP TABLE IF EXISTS estacionamento;
@@ -18,6 +20,8 @@ DROP TABLE IF EXISTS zona;
 DROP TABLE IF EXISTS veiculo;
 DROP TABLE IF EXISTS utilizador;
 DROP TABLE IF EXISTS parque_estacionamento;
+
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- ==========================================================
 -- UTILIZADORES
