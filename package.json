@@ -8,5 +8,8 @@
     "start:f": "npm run build --prefix frontend",
     "start:b": "npm run start --prefix backend",
     "seed:b": "npm run seed --prefix backend"
+  },
+  "dependencies": {
+    "nodemon": "^3.1.14"
   }
 }
