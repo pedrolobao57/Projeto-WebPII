@@ -125,11 +125,13 @@ exports.listarReservas = async (req, res) => {
                 resIdHex: `R-${r.id_reserva.toString().padStart(3, '0')}`,
                 status: status,
                 location: r.Vaga?.Zona?.ParqueEstacionamento?.nome || 'ParkSmart Garage',
+                address: r.Vaga?.Zona?.ParqueEstacionamento?.localizacao || 'Street Address',
                 level: r.Vaga?.Zona?.nome_zona || 'Piso 1',
                 time: `${timeStart} - ${timeEnd} ${dateStr}`,
                 spotId: r.Vaga?.id_vaga.toString(),
                 spotNumber: r.Vaga?.numero_vaga || 'A-01',
                 vehiclePlate: r.Veiculo?.matricula || '',
+                id_veiculo: r.id_veiculo,
                 data_inicio: r.data_inicio,
                 data_fim: r.data_fim
             };
@@ -174,6 +176,7 @@ exports.obterReserva = async (req, res) => {
             spotId: r.Vaga?.id_vaga.toString(),
             spotNumber: r.Vaga?.numero_vaga || 'A-01',
             vehiclePlate: r.Veiculo?.matricula || '',
+            id_veiculo: r.id_veiculo,
             vehicleBrand: r.Veiculo?.marca || '',
             vehicleModel: r.Veiculo?.modelo || ''
         });

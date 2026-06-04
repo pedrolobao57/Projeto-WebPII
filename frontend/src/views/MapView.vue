@@ -420,7 +420,7 @@ const openDetails = (id) => {
 #map {
   width: 100%;
   height: 100%;
-  background-color: var(--color-bg-base);
+  background-color: #000000;
 }
 
 /* Custom Leaflet Marker Styling */

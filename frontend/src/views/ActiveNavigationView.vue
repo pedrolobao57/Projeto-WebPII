@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { 
   PhArrowLeft, 
@@ -9,7 +9,8 @@ import {
   PhCheckCircle,
   PhHouseLine
 } from '@phosphor-icons/vue'
-import { getReservation, getUserReservations } from '../api/reservations'
+import { getReservation, getUserReservations, cancelReservation } from '../api/reservations'
+import apiClient from '../api/client'
 
 const router = useRouter()
 const route = useRoute()
@@ -21,17 +22,24 @@ const activeReservation = ref({
   level: 'Level 2'
 })
 
+const mapUrl = computed(() => {
+  const query = activeReservation.value?.address || activeReservation.value?.location || 'Porto'
+  return `https://maps.google.com/maps?q=${encodeURIComponent(query)}&t=&z=16&ie=UTF8&iwloc=&output=embed`
+})
+
 onMounted(async () => {
   try {
-    if (reservationId) {
-      const data = await getReservation(reservationId)
-      activeReservation.value = data
-    } else {
+    let resId = reservationId
+    if (!resId) {
       const list = await getUserReservations()
       const active = list.find(r => r.status === 'Active') || list[0]
       if (active) {
-        activeReservation.value = active
+        resId = active.id
       }
+    }
+    if (resId) {
+      const data = await getReservation(resId)
+      activeReservation.value = data
     }
   } catch (err) {
     console.error('Erro ao carregar detalhes de navegacao:', err)
@@ -42,8 +50,38 @@ const goBack = () => router.back()
 const showQR = () => {
   // Logic to show QR code modal
 }
-const arrive = () => {
-  router.push('/dashboard')
+const arrive = async () => {
+  try {
+    const payload = {
+      id_veiculo: Number(activeReservation.value.id_veiculo),
+      id_vaga: Number(activeReservation.value.spotId || activeReservation.value.id_vaga),
+      id_reserva: Number(activeReservation.value.id || activeReservation.value.id_reserva)
+    }
+
+    if (!payload.id_veiculo || !payload.id_vaga || !payload.id_reserva) {
+      throw new Error('Detalhes da reserva incompletos para registar a entrada do veículo.')
+    }
+
+    await apiClient.post('/estacionamentos/entrada', payload)
+    alert('Entrada no parque registada com sucesso!')
+    router.push('/dashboard')
+  } catch (err) {
+    alert(err.error || err.message || 'Erro ao registar a entrada no parque.')
+    console.error('Erro ao registar entrada:', err)
+  }
+}
+const handleCancel = async () => {
+  if (confirm('Are you sure you want to cancel this reservation?')) {
+    try {
+      const resId = reservationId || activeReservation.value.id
+      if (!resId) throw new Error('No reservation ID found.')
+      await cancelReservation(resId)
+      alert('Reservation cancelled successfully.')
+      router.push('/dashboard')
+    } catch (err) {
+      alert(err.message || 'Error cancelling reservation.')
+    }
+  }
 }
 </script>
 
@@ -60,7 +98,17 @@ const arrive = () => {
 
     <!-- Map Background -->
     <div class="map-bg">
-      <div class="route-visualization">
+      <iframe
+        v-if="activeReservation.address || activeReservation.location"
+        :src="mapUrl"
+        width="100%"
+        height="100%"
+        style="border:0;"
+        allowfullscreen=""
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+      ></iframe>
+      <div v-else class="route-visualization">
         <div class="entrance-label">Entrance →</div>
         <svg class="route-path" viewBox="0 0 200 150" xmlns="http://www.w3.org/2000/svg">
           <path d="M 20,130 Q 100,10 180,50" fill="none" stroke="var(--color-accent-cyan)" stroke-width="4" stroke-dasharray="8 8" />
@@ -78,8 +126,8 @@ const arrive = () => {
         <PhArrowUpRight :size="24" color="var(--color-bg-base)" weight="bold" />
       </div>
       <div class="direction-text">
-        <span class="distance">In 150m</span>
-        <h2>Turn right onto Main Street</h2>
+        <span class="distance">Driving Directions</span>
+        <h2>Navigate to {{ activeReservation.location }}</h2>
       </div>
     </div>
 
@@ -120,6 +168,10 @@ const arrive = () => {
           <span>I've Arrived</span>
         </button>
       </div>
+
+      <button class="btn-danger w-full mt-2" @click="handleCancel">
+        Cancel Reservation
+      </button>
       
       <div class="footer-note">
         Follow GPS directions to navigate to your parking spot
@@ -151,6 +203,14 @@ const arrive = () => {
   flex: 1;
   position: relative;
   background-color: #1a2235; /* Darker map tone */
+}
+
+.map-bg iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+  filter: invert(90%) hue-rotate(180deg) brightness(85%) contrast(115%);
 }
 
 .route-visualization {
@@ -339,5 +399,36 @@ const arrive = () => {
   text-align: center;
   font-size: 0.75rem;
   color: var(--color-text-secondary);
+}
+
+.btn-danger {
+  width: 100%;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--color-status-occupied);
+  color: var(--color-status-occupied);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+}
+
+.btn-danger:hover {
+  background-color: var(--color-status-occupied);
+  color: #ffffff;
+}
+
+.w-full {
+  width: 100%;
+}
+
+.mt-2 {
+  margin-top: 0.5rem;
 }
 </style>
