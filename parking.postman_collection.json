@@ -691,7 +691,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"id_sensor\": {{sensorId}},\n  \"id_gestor\": 41,\n  \"descricao_problema\": \"Sensor failing to register occupied state correctly.\"\n}",
+              "raw": "{\n  \"id_sensor\": {{sensorId}},\n  \"id_utilizador\": 45,\n  \"descricao_problema\": \"Sensor failing to register occupied state correctly.\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

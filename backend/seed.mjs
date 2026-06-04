@@ -214,7 +214,6 @@ async function main() {
 
   const config = {
     numClientes: getNumberEnv('NUM_CLIENTES', 40),
-    numGestores: getNumberEnv('NUM_GESTORES', 4),
     numParques: getNumberEnv('NUM_PARQUES', 3),
     zonasPorParque: getNumberEnv('ZONAS_POR_PARQUE', 3),
     vagasPorZona: getNumberEnv('VAGAS_POR_ZONA', 20),
@@ -251,15 +250,16 @@ async function main() {
       ]);
     }
 
-    for (let i = 0; i < config.numGestores; i += 1) {
+
+    for (let i = 0; i < 2; i += 1) {
       const nome = faker.person.fullName();
 
       userRows.push([
         nome,
-        `gestor.${i + 1}@example.com`,
+        `admin.${i + 1}@example.com`,
         faker.phone.number(),
         '$2b$10$demo.hash.password.not.for.production',
-        'GESTOR',
+        'ADMIN',
         0
       ]);
     }

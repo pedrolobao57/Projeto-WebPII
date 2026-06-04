@@ -205,6 +205,7 @@ const handleSignOut = () => {
           <PhUser :size="16" /> Profile
         </button>
         <button 
+          v-if="localUser?.tipo_utilizador !== 'ADMIN'"
           class="tab-btn" 
           :class="{ active: activeTab === 'vehicles' }"
           @click="activeTab = 'vehicles'"
@@ -212,6 +213,7 @@ const handleSignOut = () => {
           <PhCar :size="16" /> Vehicles
         </button>
         <button 
+          v-if="localUser?.tipo_utilizador !== 'ADMIN'"
           class="tab-btn" 
           :class="{ active: activeTab === 'payment' }"
           @click="activeTab = 'payment'"
@@ -314,7 +316,7 @@ const handleSignOut = () => {
       </div>
 
       <!-- Vehicles Tab Panel -->
-      <div v-if="activeTab === 'vehicles'" class="settings-section">
+      <div v-if="activeTab === 'vehicles' && localUser?.tipo_utilizador !== 'ADMIN'" class="settings-section">
         <div class="vehicles-header">
           <h3 class="section-title">My Vehicles</h3>
           <button class="add-vehicle-trigger-btn" @click="showVehicleModal = true">
@@ -341,7 +343,7 @@ const handleSignOut = () => {
       </div>
 
       <!-- Payment Tab Panel -->
-      <div v-if="activeTab === 'payment'" class="settings-section">
+      <div v-if="activeTab === 'payment' && localUser?.tipo_utilizador !== 'ADMIN'" class="settings-section">
         <h3 class="section-title">Payment Methods</h3>
         <div class="settings-card bg-card radius-lg">
           <div class="setting-item">

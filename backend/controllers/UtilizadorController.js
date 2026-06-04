@@ -32,12 +32,12 @@ exports.signup = async (req, res) => {
             email: email,
             telefone: phone,
             palavra_passe: hashedPassword,
-            tipo_utilizador: 'CLIENTE'
+            tipo_utilizador: req.body.tipo_utilizador || 'CLIENTE'
         });
 
-        // Create vehicles if present
+        // Create vehicles if present (only for CLIENTE, admins don't have vehicles)
         const createdVehicles = [];
-        if (vehicles && Array.isArray(vehicles)) {
+        if (user.tipo_utilizador === 'CLIENTE' && vehicles && Array.isArray(vehicles)) {
             const plateRegex = /^(?:[A-Z]{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-[A-Z]{2}|[A-Z]{2}-\d{2}-\d{2}|\d{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-\d{2})$/;
             for (const v of vehicles) {
                 if (v.plate) {
@@ -66,6 +66,7 @@ exports.signup = async (req, res) => {
             name: user.nome,
             email: user.email,
             phone: user.telefone,
+            tipo_utilizador: user.tipo_utilizador,
             loyaltyPoints: user.pontos_fidelidade,
             vehicles: createdVehicles.map(v => ({
                 id_veiculo: v.id_veiculo,
@@ -108,6 +109,7 @@ exports.login = async (req, res) => {
             name: user.nome,
             email: user.email,
             phone: user.telefone,
+            tipo_utilizador: user.tipo_utilizador,
             loyaltyPoints: user.pontos_fidelidade,
             vehicles: (user.Veiculos || []).map(v => ({
                 id_veiculo: v.id_veiculo,
@@ -145,6 +147,7 @@ exports.getProfile = async (req, res) => {
             name: user.nome,
             email: user.email,
             phone: user.telefone,
+            tipo_utilizador: user.tipo_utilizador,
             loyaltyPoints: user.pontos_fidelidade,
             vehicles: (user.Veiculos || []).map(v => ({
                 id_veiculo: v.id_veiculo,
@@ -181,6 +184,7 @@ exports.updateProfile = async (req, res) => {
             name: user.nome,
             email: user.email,
             phone: user.telefone,
+            tipo_utilizador: user.tipo_utilizador,
             loyaltyPoints: user.pontos_fidelidade,
             vehicles: (user.Veiculos || []).map(v => ({
                 id_veiculo: v.id_veiculo,

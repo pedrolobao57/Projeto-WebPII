@@ -16,6 +16,7 @@ const form = ref({
   email: '',
   password: '',
   phone: '',
+  tipo_utilizador: 'CLIENTE',
   vehicles: [
     { plate: '', brand: '', model: '', color: '' }
   ],
@@ -51,7 +52,8 @@ const handleSignup = async () => {
       email: form.value.email,
       password: form.value.password,
       phone: form.value.phone,
-      vehicles: form.value.vehicles
+      tipo_utilizador: form.value.tipo_utilizador,
+      vehicles: form.value.tipo_utilizador === 'CLIENTE' ? form.value.vehicles : []
     }
 
     // 1. Criar a conta
@@ -61,7 +63,11 @@ const handleSignup = async () => {
     const response = await loginUser({ email: form.value.email, password: form.value.password })
     saveSession(response.token, response.refreshToken, response.user)
 
-    router.push('/dashboard')
+    if (response.user.tipo_utilizador === 'ADMIN') {
+      router.push('/admin-dashboard')
+    } else {
+      router.push('/dashboard')
+    }
   } catch (err) {
     errorMessage.value = err.message || 'Erro ao criar conta'
   }
@@ -119,9 +125,31 @@ const openDoc = (type) => {
             <PhPhone class="input-icon" :size="20" />
             <input type="tel" placeholder="Phone Number" v-model="form.phone" required />
           </div>
+
+          <div class="input-group">
+            <label class="form-label" style="display: block; margin-bottom: 0.5rem;">Account Type</label>
+            <div class="role-selector">
+              <button 
+                type="button" 
+                class="role-btn" 
+                :class="{ active: form.tipo_utilizador === 'CLIENTE' }" 
+                @click="form.tipo_utilizador = 'CLIENTE'"
+              >
+                Driver (Client)
+              </button>
+              <button 
+                type="button" 
+                class="role-btn" 
+                :class="{ active: form.tipo_utilizador === 'ADMIN' }" 
+                @click="form.tipo_utilizador = 'ADMIN'"
+              >
+                Administrator
+              </button>
+            </div>
+          </div>
         </section>
 
-        <section class="form-section">
+        <section v-if="form.tipo_utilizador === 'CLIENTE'" class="form-section">
           <div class="section-header">
             <h3 class="section-title">Vehicle Information</h3>
             <button type="button" class="btn-add" @click="addVehicle">
@@ -523,5 +551,31 @@ button:disabled {
 }
 .animate-fade-in {
   animation: fadeIn 0.2s ease-out;
+}
+
+.role-selector {
+  display: flex;
+  gap: var(--spacing-2);
+  margin-top: 0.25rem;
+}
+.role-btn {
+  flex: 1;
+  padding: 0.75rem;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+.role-btn.active {
+  background-color: var(--color-accent-cyan-transparent);
+  border-color: var(--color-accent-cyan);
+  color: var(--color-accent-cyan);
+}
+.role-btn:hover:not(.active) {
+  background-color: var(--color-bg-card-hover);
+  color: var(--color-text-primary);
 }
 </style>

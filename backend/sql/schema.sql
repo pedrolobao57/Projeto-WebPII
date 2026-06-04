@@ -33,7 +33,7 @@ CREATE TABLE utilizador (
     email VARCHAR(150) NOT NULL UNIQUE,
     telefone VARCHAR(40),
     palavra_passe VARCHAR(255) NOT NULL,
-    tipo_utilizador ENUM('CLIENTE', 'GESTOR', 'ADMIN') NOT NULL DEFAULT 'CLIENTE',
+    tipo_utilizador ENUM('CLIENTE', 'ADMIN') NOT NULL DEFAULT 'CLIENTE',
     pontos_fidelidade INT NOT NULL DEFAULT 0,
     data_registo DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -51,6 +51,7 @@ CREATE TABLE veiculo (
     matricula VARCHAR(20) NOT NULL UNIQUE,
     marca VARCHAR(50),
     modelo VARCHAR(50),
+    cor VARCHAR(50),
 
     CONSTRAINT fk_veiculo_utilizador
         FOREIGN KEY (id_utilizador)

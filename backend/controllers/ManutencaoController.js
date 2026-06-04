@@ -3,11 +3,11 @@ const Sensor = require('../models/sensor');
 
 exports.reportarAvaria = async (req, res) => {
     try {
-        const { id_sensor, id_gestor, descricao_problema } = req.body;
+        const { id_sensor, id_utilizador, descricao_problema } = req.body;
 
         const alertaManutencao = await ManutencaoSensor.create({
             id_sensor,
-            id_gestor,
+            id_utilizador,
             data_avaria: new Date(),
             descricao_problema,
             estado_manutencao: 'Reportado'

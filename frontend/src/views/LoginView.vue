@@ -31,7 +31,11 @@ const handleLogin = async () => {
   try {
     const response = await loginUser({ email: email.value, password: password.value })
     saveSession(response.token, response.refreshToken, response.user)
-    router.push('/dashboard')
+    if (response.user.tipo_utilizador === 'ADMIN') {
+      router.push('/admin-dashboard')
+    } else {
+      router.push('/dashboard')
+    }
   } catch (err) {
     errorMessage.value = err.message || 'Invalid email or password.'
   } finally {
@@ -113,8 +117,8 @@ const handleLogin = async () => {
           <button type="button" class="demo-btn-item" @click="fillCredentials('cliente.1@example.com', 'password')">
             <strong>Client:</strong> cliente.1@example.com
           </button>
-          <button type="button" class="demo-btn-item" @click="fillCredentials('gestor.1@example.com', 'password')">
-            <strong>Manager:</strong> gestor.1@example.com
+          <button type="button" class="demo-btn-item" @click="fillCredentials('admin.1@example.com', 'password')">
+            <strong>Admin:</strong> admin.1@example.com
           </button>
         </div>
         <p class="demo-hint">Password: <code>password</code></p>

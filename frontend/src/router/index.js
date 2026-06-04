@@ -26,6 +26,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/admin-dashboard',
+      name: 'adminDashboard',
+      component: () => import('../views/AdminDashboardView.vue'),
+      meta: { requiresAuth: true, requiresAdmin: true },
+    },
+    {
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
@@ -64,10 +70,30 @@ const router = createRouter({
   ],
 })
 
-// Guarda de navegação — redireciona utilizadores não autenticados
+// Guarda de navegação — redireciona utilizadores não autenticados e lida com permissões
 router.beforeEach((to) => {
-  if (to.meta.requiresAuth && !localStorage.getItem('token')) {
+  const token = localStorage.getItem('token')
+  if (to.meta.requiresAuth && !token) {
     return { path: '/' }
+  }
+
+  if (token) {
+    let user = null
+    try {
+      user = JSON.parse(localStorage.getItem('user') || 'null')
+    } catch (e) {
+      // Ignore
+    }
+
+    // Redirect admin trying to access standard dashboard
+    if (to.name === 'dashboard' && user?.tipo_utilizador === 'ADMIN') {
+      return { path: '/admin-dashboard' }
+    }
+
+    // Redirect normal user trying to access admin dashboard
+    if (to.meta.requiresAdmin && user?.tipo_utilizador !== 'ADMIN') {
+      return { path: '/dashboard' }
+    }
   }
 })
 
