@@ -59,4 +59,14 @@ export const getUserProfile = () => {
   return apiClient.get('/users/me')
 }
 
+// POST /users/forgot-password - Send password recovery PIN code
+export const forgotPassword = (email) => {
+  return apiClient.post('/users/forgot-password', { email })
+}
+
+// POST /users/reset-password - Reset password using recovery code
+export const resetPassword = (data) => {
+  return apiClient.post('/users/reset-password', data)
+}
+
 

@@ -110,6 +110,11 @@ const handleLogin = async () => {
         <a href="#" @click.prevent="goToSignup">Create one</a>
       </p>
 
+      <p class="signup-prompt" style="margin-top: 0.5rem; font-size: 0.85rem;">
+        Forgot your password?
+        <a href="#" @click.prevent="router.push('/forgot-password')">Reset here</a>
+      </p>
+
       <!-- Demo Credentials Helper -->
       <div class="demo-section bg-card radius-lg">
         <h3 class="demo-title">🔑 Quick Demo Login</h3>

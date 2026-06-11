@@ -301,3 +301,70 @@ exports.adicionarVeiculo = async (req, res) => {
     }
 };
 
+exports.forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ message: 'O email é obrigatório.' });
+        }
+
+        const user = await Utilizador.findOne({ where: { email } });
+        if (!user) {
+            // Return success message to prevent user enumeration
+            return res.json({ message: 'Se o email existir, um código de recuperação foi gerado.' });
+        }
+
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const expires = new Date(Date.now() + 15 * 60 * 1000);
+
+        user.token_recuperacao = code;
+        user.expiracao_recuperacao = expires;
+        await user.save();
+
+        console.log(`\n========================================`);
+        console.log(`[SIMULADOR EMAIL] Recuperação de Password para: ${email}`);
+        console.log(`Código PIN de 6 dígitos: ${code}`);
+        console.log(`Validade: 15 minutos (expira em ${expires.toISOString()})`);
+        console.log(`========================================\n`);
+
+        res.json({ message: 'Código de recuperação gerado com sucesso. Verifica a consola do backend!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao solicitar recuperação de password.', error: err.message });
+    }
+};
+
+exports.resetPassword = async (req, res) => {
+    try {
+        const { email, token, newPassword } = req.body;
+
+        if (!email || !token || !newPassword) {
+            return res.status(400).json({ message: 'Todos os campos são obrigatórios.' });
+        }
+
+        if (newPassword.length < 6) {
+            return res.status(400).json({ message: 'A nova password deve ter pelo menos 6 caracteres.' });
+        }
+
+        const user = await Utilizador.findOne({ where: { email, token_recuperacao: token } });
+        if (!user) {
+            return res.status(400).json({ message: 'Código de recuperação inválido ou email incorreto.' });
+        }
+
+        const now = new Date();
+        if (new Date(user.expiracao_recuperacao) < now) {
+            return res.status(400).json({ message: 'O código de recuperação expirou. Solicite um novo.' });
+        }
+
+        user.palavra_passe = bcrypt.hashSync(newPassword, 10);
+        user.token_recuperacao = null;
+        user.expiracao_recuperacao = null;
+        await user.save();
+
+        res.json({ success: true, message: 'Password redefinida com sucesso!' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao redefinir password.', error: err.message });
+    }
+};
+

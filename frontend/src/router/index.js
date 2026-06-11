@@ -66,6 +66,11 @@ const router = createRouter({
       name: 'navigation',
       component: () => import('../views/ActiveNavigationView.vue'),
       meta: { requiresAuth: true },
+    },
+    {
+      path: '/forgot-password',
+      name: 'forgotPassword',
+      component: () => import('../views/ForgotPasswordView.vue'),
     }
   ],
 })

@@ -35,6 +35,8 @@ app.get('/api/teste', async (req, res) => {
 app.post('/users', UtilizadorController.signup);
 app.post('/users/login', UtilizadorController.login);
 app.post('/users/refresh', UtilizadorController.refreshToken);
+app.post('/users/forgot-password', UtilizadorController.forgotPassword);
+app.post('/users/reset-password', UtilizadorController.resetPassword);
 app.get('/users/me', authenticateToken, UtilizadorController.getProfile);
 app.patch('/users/me', authenticateToken, UtilizadorController.updateProfile);
 app.post('/users/me/change-password', authenticateToken, UtilizadorController.changePassword);

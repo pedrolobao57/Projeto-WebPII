@@ -9,7 +9,9 @@ const Utilizador = sequelize.define('Utilizador', {
     palavra_passe: { type: DataTypes.STRING(255), allowNull: false },
     tipo_utilizador: { type: DataTypes.ENUM('CLIENTE', 'ADMIN'), allowNull: false, defaultValue: 'CLIENTE' },
     pontos_fidelidade: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-    data_registo: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
+    data_registo: { type: DataTypes.DATE, defaultValue: DataTypes.NOW },
+    token_recuperacao: { type: DataTypes.STRING(10), allowNull: true },
+    expiracao_recuperacao: { type: DataTypes.DATE, allowNull: true }
 }, { tableName: 'utilizador', timestamps: false });
 
 module.exports = Utilizador;

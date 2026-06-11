@@ -1,0 +1,17 @@
+# Set the default behavior to handle all files automatically.
+* text=auto
+
+# Declare files that will always have LF line endings in the repo but convert to system standard on checkout
+*.js text
+*.json text
+*.html text
+*.css text
+*.vue text
+*.md text
+*.yml text
+*.yaml text
+*.xml text
+*.jmx text
+
+# Keep shell scripts using LF line endings
+*.sh text eol=lf
