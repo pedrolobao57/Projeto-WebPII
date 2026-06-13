@@ -1,3 +1,10 @@
+/**
+ * @file ReservaController.js
+ * @description Controlador encarregue da gestão de reservas de vagas de estacionamento.
+ * Habilita a criação de novas reservas verificando sobreposição de horários, o cancelamento de reservas,
+ * e a listagem de reservas formatadas para exibição direta na interface gráfica do utilizador.
+ */
+
 const { Op } = require('sequelize');
 const Reserva = require('../models/reserva');
 const Vaga = require('../models/vaga');
@@ -5,21 +12,39 @@ const Veiculo = require('../models/veiculo');
 const Zona = require('../models/zona');
 const ParqueEstacionamento = require('../models/parque_estacionamento');
 
+/**
+ * @function criarReserva
+ * @async
+ * @description Cria uma nova reserva de vaga de estacionamento para o utilizador autenticado.
+ * Efetua as seguintes verificações de integridade:
+ * 1. Verifica se a vaga existe e não está no estado 'INDISPONIVEL'.
+ * 2. Verifica se a vaga já tem reservas no estado 'PENDENTE' ou 'CONFIRMADA' que coincidam ou
+ *    se sobreponham temporalmente com o intervalo de datas selecionado (`data_inicio` e `data_fim`).
+ * 3. Garante que o utilizador tem pelo menos um veículo associado. Se nenhum `id_veiculo` for enviado,
+ *    associa automaticamente o primeiro veículo registado pelo utilizador.
+ * 4. Altera o estado da vaga para 'RESERVADO' e persiste o registo da reserva.
+ * 
+ * @param {Object} req - Objeto de pedido Express (Request). Contém body com `id_vaga`, `data_inicio`, `data_fim`, e `id_veiculo`. `req.user` deve estar definido pelo middleware de autenticação.
+ * @param {Object} res - Objeto de resposta Express (Response).
+ * @returns {Object} Retorna a nova reserva criada ou erro 400/500 com o detalhe.
+ */
 exports.criarReserva = async (req, res) => {
     try {
         const { id_vaga, data_inicio, data_fim, id_veiculo } = req.body;
         const id_utilizador = req.user.id_utilizador;
 
-        // 1. Verificar se a vaga existe e não está indisponível
+        // 1. Validar a existência e operacionalidade da vaga de estacionamento pretendida.
         const vaga = await Vaga.findByPk(id_vaga);
         if (!vaga || vaga.estado === 'INDISPONIVEL') {
             return res.status(400).json({ error: 'A vaga selecionada não está disponível para reserva.' });
         }
 
-        // Verificar se já existe uma reserva ativa (PENDENTE ou CONFIRMADA) para a mesma vaga no mesmo período
         const dataInicioDate = new Date(data_inicio);
         const dataFimDate = new Date(data_fim);
 
+        // --- Verificação de Sobreposição Temporal de Reservas ---
+        // Procura alguma reserva existente para a mesma vaga, em estados ativos, cujo intervalo coincida:
+        // (reserva.data_inicio < nova.data_fim) E (reserva.data_fim > nova.data_inicio)
         const reservaExistente = await Reserva.findOne({
             where: {
                 id_vaga,
@@ -39,8 +64,9 @@ exports.criarReserva = async (req, res) => {
             return res.status(400).json({ error: 'A vaga selecionada já está reservada para o período pretendido.' });
         }
 
-        // 2. Determinar id_veiculo se não enviado
+        // 2. Determinar o ID do veículo a associar à reserva.
         let vehicleId = id_veiculo;
+        // Caso o frontend não envie um ID de veículo específico, tenta associar o primeiro veículo do utilizador.
         if (!vehicleId) {
             const firstVehicle = await Veiculo.findOne({ where: { id_utilizador } });
             if (!firstVehicle) {
@@ -49,7 +75,7 @@ exports.criarReserva = async (req, res) => {
             vehicleId = firstVehicle.id_veiculo;
         }
 
-        // 3. Criar a reserva
+        // 3. Efetivar a inserção do registo da nova reserva com estado inicial 'PENDENTE'.
         const novaReserva = await Reserva.create({
             id_utilizador,
             id_veiculo: vehicleId,
@@ -59,7 +85,7 @@ exports.criarReserva = async (req, res) => {
             estado_reserva: 'PENDENTE'
         });
 
-        // 4. Atualizar o estado da Vaga para 'RESERVADO'
+        // 4. Bloquear/atualizar o estado imediato da vaga para 'RESERVADO'.
         await vaga.update({ estado: 'RESERVADO' });
 
         res.status(201).json({ message: 'Reserva efetuada com sucesso!', novaReserva });
@@ -69,6 +95,16 @@ exports.criarReserva = async (req, res) => {
     }
 };
 
+/**
+ * @function cancelarReserva
+ * @async
+ * @description Cancela uma reserva ativa identificada pelo ID.
+ * Liberta a vaga de estacionamento associada alterando o seu estado para 'LIVRE' e define a reserva como 'CANCELADA'.
+ * 
+ * @param {Object} req - Objeto de pedido Express (Request). Contém o ID da reserva em `req.params.id`.
+ * @param {Object} res - Objeto de resposta Express (Response).
+ * @returns {Object} Mensagem de sucesso ou erro 404/500.
+ */
 exports.cancelarReserva = async (req, res) => {
     try {
         const { id } = req.params;
@@ -76,8 +112,9 @@ exports.cancelarReserva = async (req, res) => {
         
         if (!reserva) return res.status(404).json({ error: 'Reserva não encontrada.' });
 
-        // Libertar a vaga associada
+        // Liberta a vaga de estacionamento que estava bloqueada por esta reserva.
         await Vaga.update({ estado: 'LIVRE' }, { where: { id_vaga: reserva.id_vaga } });
+        // Modifica o estado lógico da reserva para 'CANCELADA'.
         await reserva.update({ estado_reserva: 'CANCELADA' });
 
         res.json({ message: 'Reserva cancelada com sucesso.' });
@@ -87,11 +124,24 @@ exports.cancelarReserva = async (req, res) => {
     }
 };
 
+/**
+ * @function listarReservas
+ * @async
+ * @description Obtém a lista de todas as reservas do utilizador autenticado atual,
+ * ordenadas cronologicamente por data de início de forma decrescente.
+ * Formata os dados para corresponder ao esquema de apresentação esperado pela DashboardView do frontend
+ * (ex: gera strings amigáveis para horas, localizações e mapeia estados internos para termos da UI).
+ * 
+ * @param {Object} req - Objeto de pedido Express (Request). `req.user` deve conter o utilizador autenticado.
+ * @param {Object} res - Objeto de resposta Express (Response).
+ * @returns {Array} Array de objetos contendo os dados formatados das reservas.
+ */
 exports.listarReservas = async (req, res) => {
     try {
         const id_utilizador = req.user.id_utilizador;
         const reservations = await Reserva.findAll({
             where: { id_utilizador },
+            // Realiza Joins complexos para carregar informação da vaga, da sua zona e do respetivo parque de estacionamento, bem como a viatura associada.
             include: [
                 {
                     model: Vaga,
@@ -102,15 +152,18 @@ exports.listarReservas = async (req, res) => {
             order: [['data_inicio', 'DESC']]
         });
 
-        // Format to match DashboardView reservations schema
+        // Formata os registos da BD no formato ideal consumido pela Dashboard do Frontend
         const results = reservations.map(r => {
+            // Conversão de datas e horas em strings formatadas de leitura fácil.
             const timeStart = new Date(r.data_inicio).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const timeEnd = new Date(r.data_fim).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             const dateStr = new Date(r.data_inicio).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
             
+            // Lógica de mapeamento dinâmico do estado da reserva para a interface gráfica
             let status = 'Upcoming';
             if (r.estado_reserva === 'CONFIRMADA') {
                 const now = new Date();
+                // Se o período de reserva coincidir com a hora atual, define-a como ativa na UI.
                 if (now >= new Date(r.data_inicio) && now <= new Date(r.data_fim)) {
                     status = 'Active';
                 }
@@ -144,6 +197,16 @@ exports.listarReservas = async (req, res) => {
     }
 };
 
+/**
+ * @function obterReserva
+ * @async
+ * @description Obtém a informação pormenorizada de uma reserva específica a partir do ID.
+ * Semelhante à listagem, inclui associações profundas e devolve os dados formatados em formato plano.
+ * 
+ * @param {Object} req - Objeto de pedido Express (Request). Contém `id` da reserva em `req.params.id`.
+ * @param {Object} res - Objeto de resposta Express (Response).
+ * @returns {Object} Retorna o objeto formatado com detalhes da reserva ou erro 404/500.
+ */
 exports.obterReserva = async (req, res) => {
     try {
         const { id } = req.params;
@@ -185,3 +248,4 @@ exports.obterReserva = async (req, res) => {
         res.status(500).json({ error: 'Erro ao buscar reserva.', detalhes: err.message });
     }
 };
+
