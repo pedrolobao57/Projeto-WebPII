@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="pinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#0891b2" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle for dark/light contrast -->
+  <circle cx="256" cy="256" r="230" fill="#0f172a" />
+  <!-- Outer Glow Ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#pinGrad)" stroke-width="20" opacity="0.3" />
+  <!-- Map Pin Icon -->
+  <path d="M256,70 C160,70 100,130 100,226 C100,322 256,430 256,430 C256,430 412,322 412,226 C412,130 352,70 256,70 Z" fill="url(#pinGrad)" />
+  <!-- Inner Circle -->
+  <circle cx="256" cy="210" r="90" fill="#0f172a" />
+  <!-- Letter P -->
+  <text x="252" y="248" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="900" font-size="115" fill="#ffffff" text-anchor="middle">P</text>
+  <!-- Status green dot (online / free spot indicator) -->
+  <circle cx="315" cy="155" r="22" fill="#10b981" stroke="#0f172a" stroke-width="6" />
+</svg>

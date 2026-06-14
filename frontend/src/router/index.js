@@ -8,69 +8,73 @@ const router = createRouter({
       path: '/',
       name: 'landing',
       component: LandingView,
+      meta: { title: 'Home' },
     },
     {
       path: '/signup',
       name: 'signup',
       component: () => import('../views/CreateAccountView.vue'),
+      meta: { title: 'Sign Up' },
     },
     {
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
+      meta: { title: 'Login' },
     },
     {
       path: '/dashboard',
       name: 'dashboard',
       component: () => import('../views/DashboardView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: 'Dashboard' },
     },
     {
       path: '/admin-dashboard',
       name: 'adminDashboard',
       component: () => import('../views/AdminDashboardView.vue'),
-      meta: { requiresAuth: true, requiresAdmin: true },
+      meta: { requiresAuth: true, requiresAdmin: true, title: 'Admin Dashboard' },
     },
     {
       path: '/profile',
       name: 'profile',
       component: () => import('../views/ProfileView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: 'Profile' },
     },
     {
       path: '/map',
       name: 'map',
       component: () => import('../views/MapView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: 'Find Parking' },
     },
     {
       path: '/parking/:id',
       name: 'parkingDetails',
       component: () => import('../views/ParkingDetailsView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: 'Parking Details' },
     },
     {
       path: '/reserve/:spotId',
       name: 'reserve',
       component: () => import('../views/ReservationView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: 'Reserve Spot' },
     },
     {
       path: '/payment',
       name: 'payment',
       component: () => import('../views/PaymentView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: 'Payment' },
     },
     {
       path: '/navigation',
       name: 'navigation',
       component: () => import('../views/ActiveNavigationView.vue'),
-      meta: { requiresAuth: true },
+      meta: { requiresAuth: true, title: 'Active Navigation' },
     },
     {
       path: '/forgot-password',
       name: 'forgotPassword',
       component: () => import('../views/ForgotPasswordView.vue'),
+      meta: { title: 'Forgot Password' },
     }
   ],
 })
@@ -100,6 +104,12 @@ router.beforeEach((to) => {
       return { path: '/dashboard' }
     }
   }
+})
+
+// Atualiza o título da página dinamicamente com base na rota ativa
+router.afterEach((to) => {
+  const baseTitle = 'Park Smart'
+  document.title = to.meta.title ? `${baseTitle} - ${to.meta.title}` : baseTitle
 })
 
 export default router
