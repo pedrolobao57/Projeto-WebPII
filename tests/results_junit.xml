@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="Mocha Tests" time="14.733" tests="12" failures="0">
+  <testsuite name="Root Suite" timestamp="2026-06-15T01:01:35" tests="0" time="0.000" failures="0">
+  </testsuite>
+  <testsuite name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT)" timestamp="2026-06-15T01:01:35" tests="12" file="C:\Users\LYT\OneDrive - Instituto Politécnico do Porto\Ambiente de Trabalho\gonçalo\escola\projeto2\Projeto-WebPII\tests\test_functional.js" time="14.732" failures="0">
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-18: test_rf001_criar_conta_pt18: Registo de Cliente e verificação de gravação de dados" time="1.566" classname="PT-18: test_rf001_criar_conta_pt18: Registo de Cliente e verificação de gravação de dados">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-19: test_rf002_login_pt19: Login sucesso (Cliente/Admin) e rejeição de inválidos" time="1.391" classname="PT-19: test_rf002_login_pt19: Login sucesso (Cliente/Admin) e rejeição de inválidos">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-20: test_rf003_recuperar_password_pt20: Pedido de PIN de recuperação de password e erros" time="0.338" classname="PT-20: test_rf003_recuperar_password_pt20: Pedido de PIN de recuperação de password e erros">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-21: test_rf004_registar_lugares_pt21: Login de Admin e verificação de visualização de vagas livres" time="0.406" classname="PT-21: test_rf004_registar_lugares_pt21: Login de Admin e verificação de visualização de vagas livres">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-22: test_rf005_consultar_lugares_pt22: Mapa/Detalhes de estacionamento exibe cores de ocupação correta" time="0.477" classname="PT-22: test_rf005_consultar_lugares_pt22: Mapa/Detalhes de estacionamento exibe cores de ocupação correta">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-23: test_rf006_reservar_lugares_pt23: Reserva de vaga e validação do cálculo total do preço" time="1.351" classname="PT-23: test_rf006_reservar_lugares_pt23: Reserva de vaga e validação do cálculo total do preço">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-24: test_rf007_marcar_presenca_pt24: Clicar em &quot;I&apos;ve Arrived&quot; no painel e marcar vaga como Ocupado" time="4.210" classname="PT-24: test_rf007_marcar_presenca_pt24: Clicar em &quot;I&apos;ve Arrived&quot; no painel e marcar vaga como Ocupado">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-25: test_rf008_acompanhar_estacionamento_pt25: Atualização em tempo real do tempo/preço acumulado no painel" time="0.259" classname="PT-25: test_rf008_acompanhar_estacionamento_pt25: Atualização em tempo real do tempo/preço acumulado no painel">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-26: test_rf009_registar_saida_pt26: Processar saída da vaga e atualizar o seu estado para Livre" time="0.177" classname="PT-26: test_rf009_registar_saida_pt26: Processar saída da vaga e atualizar o seu estado para Livre">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-27: test_rf010_pagar_pt27: Processo de pagamento de faturação e desconto de fidelidade" time="1.896" classname="PT-27: test_rf010_pagar_pt27: Processo de pagamento de faturação e desconto de fidelidade">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-28: test_rf011_recolher_dados_sensores_pt28: Atualização do estado do sensor e sincronização nos logs de Admin" time="0.198" classname="PT-28: test_rf011_recolher_dados_sensores_pt28: Atualização do estado do sensor e sincronização nos logs de Admin">
+    </testcase>
+    <testcase name="ParkSmart - Testes Funcionais &amp; E2E (Jira Xray PT) PT-29: test_rf012_aceder_a_historico_pt29: Listagem ordenada por data no separador de Histórico" time="0.230" classname="PT-29: test_rf012_aceder_a_historico_pt29: Listagem ordenada por data no separador de Histórico">
+    </testcase>
+  </testsuite>
+</testsuites>

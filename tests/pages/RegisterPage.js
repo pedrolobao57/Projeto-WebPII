@@ -17,7 +17,7 @@ class RegisterPage extends BasePage {
     this.modelField = By.css("input[placeholder='Model']");
     this.colorSelect = By.xpath("//select[option[contains(text(), 'Select color')]]");
     
-    this.termsCheckbox = By.css('.terms-checkbox svg');
+    this.termsCheckbox = By.css('.terms-checkbox');
     this.submitBtn = By.css("form.signup-form button[type='submit']");
     this.errorBanner = By.css('.error-banner');
   }

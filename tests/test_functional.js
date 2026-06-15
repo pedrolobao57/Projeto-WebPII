@@ -55,8 +55,6 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
     await driver.get(`${BASE_URL}/login`);
     try {
       await driver.executeScript('window.localStorage.clear();');
-      await driver.navigate().refresh();
-      await driver.sleep(1000);
     } catch (e) {}
   });
 
@@ -239,8 +237,10 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   }
 
   async function loginAndVerify(email, password, badgeSelector = By.css(".user-greeting")) {
-    await loginPage.navigate(`${BASE_URL}/login`);
-    await driver.sleep(1000);
+    const currentUrl = await driver.getCurrentUrl();
+    if (!currentUrl.includes('/login')) {
+      await loginPage.navigate(`${BASE_URL}/login`);
+    }
     await loginPage.login(email, password);
     try {
       await driver.wait(until.elementLocated(badgeSelector), 10000);
@@ -258,7 +258,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF001 - Criar Conta (PT-18)
   // ==========================================================
-  it('test_rf001_criar_conta_pt18: Registo de Cliente e verificação de gravação de dados', async function () {
+  it('PT-18: test_rf001_criar_conta_pt18: Registo de Cliente e verificação de gravação de dados', async function () {
     await registerPage.navigate(`${BASE_URL}/signup`);
     const uniqueEmail = `qa.tester.js.${Math.floor(1000 + Math.random() * 9000)}@example.com`;
     const plate = `QA-${Math.floor(10 + Math.random() * 90)}-ZZ`;
@@ -286,9 +286,8 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF002 - Fazer Log In (PT-19)
   // ==========================================================
-  it('test_rf002_login_pt19: Login sucesso (Cliente/Admin) e rejeição de inválidos', async function () {
+  it('PT-19: test_rf002_login_pt19: Login sucesso (Cliente/Admin) e rejeição de inválidos', async function () {
     // 1. Success Client Login
-    await loginPage.navigate(`${BASE_URL}/login`);
     await loginPage.login("cliente.1@example.com", "password");
 
     await driver.wait(async () => {
@@ -321,8 +320,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF003 - Recuperar Password (PT-20)
   // ==========================================================
-  it('test_rf003_recuperar_password_pt20: Pedido de PIN de recuperação de password e erros', async function () {
-    await loginPage.navigate(`${BASE_URL}/login`);
+  it('PT-20: test_rf003_recuperar_password_pt20: Pedido de PIN de recuperação de password e erros', async function () {
     await loginPage.clickForgotPassword();
 
     await driver.wait(async () => {
@@ -339,8 +337,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF004 - Registar Lugares (PT-21)
   // ==========================================================
-  it('test_rf004_registar_lugares_pt21: Login de Admin e verificação de visualização de vagas livres', async function () {
-    await loginPage.navigate(`${BASE_URL}/login`);
+  it('PT-21: test_rf004_registar_lugares_pt21: Login de Admin e verificação de visualização de vagas livres', async function () {
     await loginPage.login("admin.1@example.com", "password");
 
     await driver.wait(async () => {
@@ -359,16 +356,17 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF005 - Consultar Lugares (PT-22)
   // ==========================================================
-  it('test_rf005_consultar_lugares_pt22: Mapa/Detalhes de estacionamento exibe cores de ocupação correta', async function () {
-    await loginPage.navigate(`${BASE_URL}/login`);
+  it('PT-22: test_rf005_consultar_lugares_pt22: Mapa/Detalhes de estacionamento exibe cores de ocupação correta', async function () {
     await loginPage.login("cliente.1@example.com", "password");
     await driver.wait(until.elementLocated(By.css(".user-greeting")), 10000);
 
     await driver.get(`${BASE_URL}/parking/1`);
 
     const titleEl = await driver.wait(until.elementLocated(By.css(".location-header h1")), 10000);
-    const titleText = await titleEl.getText();
-    assert.ok(titleText.includes("Parque Pintos"));
+    await driver.wait(async () => {
+      const text = await titleEl.getText();
+      return text.includes("Parque Pintos");
+    }, 10000, "Timed out waiting for park title to load (Parque Pintos)");
 
     const legend = await driver.findElement(By.css(".legend"));
     assert.ok(legend !== null);
@@ -377,8 +375,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF006 - Reservar Lugares (PT-23)
   // ==========================================================
-  it('test_rf006_reservar_lugares_pt23: Reserva de vaga e validação do cálculo total do preço', async function () {
-    await loginPage.navigate(`${BASE_URL}/login`);
+  it('PT-23: test_rf006_reservar_lugares_pt23: Reserva de vaga e validação do cálculo total do preço', async function () {
     await loginPage.login("cliente.1@example.com", "password");
     await driver.wait(until.elementLocated(By.css(".user-greeting")), 10000);
 
@@ -410,10 +407,9 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF007 - Marcar Presença (PT-24)
   // ==========================================================
-  it('test_rf007_marcar_presenca_pt24: Clicar em "I\'ve Arrived" no painel e marcar vaga como Ocupado', async function () {
+  it('PT-24: test_rf007_marcar_presenca_pt24: Clicar em "I\'ve Arrived" no painel e marcar vaga como Ocupado', async function () {
     await ensureActiveReservation("cliente.1@example.com", "password");
 
-    await loginPage.navigate(`${BASE_URL}/login`);
     await loginPage.login("cliente.1@example.com", "password");
     await driver.wait(until.elementLocated(By.css(".user-greeting")), 10000);
 
@@ -458,7 +454,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF008 - Acompanhar Estacionamento (PT-25)
   // ==========================================================
-  it('test_rf008_acompanhar_estacionamento_pt25: Atualização em tempo real do tempo/preço acumulado no painel', async function () {
+  it('PT-25: test_rf008_acompanhar_estacionamento_pt25: Atualização em tempo real do tempo/preço acumulado no painel', async function () {
     await ensureActiveReservation("cliente.1@example.com", "password");
 
     await loginAndVerify("cliente.1@example.com", "password");
@@ -470,7 +466,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF009 - Registar Saída (PT-26)
   // ==========================================================
-  it('test_rf009_registar_saida_pt26: Processar saída da vaga e atualizar o seu estado para Livre', async function () {
+  it('PT-26: test_rf009_registar_saida_pt26: Processar saída da vaga e atualizar o seu estado para Livre', async function () {
     await loginAndVerify("cliente.3@example.com", "password");
     
     const url = await driver.getCurrentUrl();
@@ -480,7 +476,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF010 - Pagar (PT-27)
   // ==========================================================
-  it('test_rf010_pagar_pt27: Processo de pagamento de faturação e desconto de fidelidade', async function () {
+  it('PT-27: test_rf010_pagar_pt27: Processo de pagamento de faturação e desconto de fidelidade', async function () {
     const spot = await findAvailableSpot("cliente.1@example.com", "password", "2026-06-12", "14:00", "17:00");
     console.log(`[RF010 Debug] Selected non-conflicting spot: ID=${spot.id}, Number=${spot.number}`);
 
@@ -544,7 +540,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF011 - Recolher Dados dos Sensores (PT-28)
   // ==========================================================
-  it('test_rf011_recolher_dados_sensores_pt28: Atualização do estado do sensor e sincronização nos logs de Admin', async function () {
+  it('PT-28: test_rf011_recolher_dados_sensores_pt28: Atualização do estado do sensor e sincronização nos logs de Admin', async function () {
     await loginAndVerify("admin.1@example.com", "password", By.css(".admin-badge"));
 
     const logsCard = await driver.wait(until.elementLocated(By.css(".system-logs")), 10000);
@@ -554,7 +550,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   // ==========================================================
   // RF012 - Aceder a Histórico (PT-29)
   // ==========================================================
-  it('test_rf012_aceder_a_historico_pt29: Listagem ordenada por data no separador de Histórico', async function () {
+  it('PT-29: test_rf012_aceder_a_historico_pt29: Listagem ordenada por data no separador de Histórico', async function () {
     await loginAndVerify("cliente.1@example.com", "password");
 
     const historyTab = await driver.wait(
@@ -563,7 +559,7 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
     );
     await historyTab.click();
 
-    const resList = await driver.findElement(By.css(".reservations-list"));
+    const resList = await driver.wait(until.elementLocated(By.css(".reservations-list")), 10000);
     assert.ok(resList !== null);
   });
 });

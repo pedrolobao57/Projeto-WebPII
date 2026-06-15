@@ -4,12 +4,14 @@
   "description": "Functional & UAT E2E tests for ParkSmart using Selenium WebDriver and Mocha",
   "main": "test_functional.js",
   "scripts": {
-    "test": "mocha test_functional.js --timeout 60000 --exit"
+    "test": "mocha test_functional.js --timeout 60000 --exit",
+    "test:junit": "mocha test_functional.js --reporter mocha-junit-reporter --reporter-options mochaFile=results_junit.xml --timeout 60000 --exit"
   },
   "dependencies": {
     "selenium-webdriver": "^4.18.2"
   },
   "devDependencies": {
-    "mocha": "^10.3.0"
+    "mocha": "^10.3.0",
+    "mocha-junit-reporter": "^2.2.1"
   }
 }
