@@ -11,6 +11,7 @@ const Vaga = require('../models/vaga');
 const Veiculo = require('../models/veiculo');
 const Zona = require('../models/zona');
 const ParqueEstacionamento = require('../models/parque_estacionamento');
+const Estacionamento = require('../models/estacionamento');
 
 /**
  * @function criarReserva
@@ -255,6 +256,13 @@ exports.obterReserva = async (req, res) => {
         const timeEnd = new Date(r.data_fim).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         const dateStr = new Date(r.data_inicio).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
 
+        const activeEstacionamento = await Estacionamento.findOne({
+            where: {
+                id_reserva: id,
+                estado_estacionamento: 'ATIVO'
+            }
+        });
+
         res.json({
             id: r.id_reserva.toString(),
             resIdHex: `R-${r.id_reserva.toString().padStart(3, '0')}`,
@@ -268,11 +276,71 @@ exports.obterReserva = async (req, res) => {
             vehiclePlate: r.Veiculo?.matricula || '',
             id_veiculo: r.id_veiculo,
             vehicleBrand: r.Veiculo?.marca || '',
-            vehicleModel: r.Veiculo?.modelo || ''
+            vehicleModel: r.Veiculo?.modelo || '',
+            hasEntered: !!activeEstacionamento,
+            estacionamentoId: activeEstacionamento ? activeEstacionamento.id_estacionamento.toString() : null
         });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Erro ao buscar reserva.', detalhes: err.message });
+    }
+};
+
+/**
+ * @function estenderReserva
+ * @async
+ * @description Estende a hora de fim de uma reserva ativa.
+ * Verifica sobreposição com outras reservas antes de salvar.
+ * 
+ * @param {Object} req - Objeto de pedido Express (Request). Contém body com `hours`.
+ * @param {Object} res - Objeto de resposta Express (Response).
+ * @returns {Object} A reserva atualizada.
+ */
+exports.estenderReserva = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { hours } = req.body;
+
+        if (!hours || isNaN(hours) || hours <= 0) {
+            return res.status(400).json({ error: 'Número de horas inválido para extensão.' });
+        }
+
+        const r = await Reserva.findByPk(id);
+        if (!r) {
+            return res.status(404).json({ error: 'Reserva não encontrada.' });
+        }
+
+        const currentFim = new Date(r.data_fim);
+        const newFimDate = new Date(currentFim.getTime() + hours * 60 * 60 * 1000);
+
+        // Validar limite de duração (max 24 horas)
+        const diffMinutes = (newFimDate.getTime() - new Date(r.data_inicio).getTime()) / 60000;
+        if (diffMinutes > 24 * 60) {
+            return res.status(400).json({ error: 'A duração total da reserva (incluindo extensão) não pode exceder 24 horas.' });
+        }
+
+        // Verificar conflitos com outras reservas
+        const conflito = await Reserva.findOne({
+            where: {
+                id_vaga: r.id_vaga,
+                id_reserva: { [Op.ne]: r.id_reserva },
+                estado_reserva: { [Op.in]: ['PENDENTE', 'CONFIRMADA'] },
+                data_inicio: { [Op.lt]: newFimDate },
+                data_fim: { [Op.gt]: new Date(r.data_inicio) }
+            }
+        });
+
+        if (conflito) {
+            return res.status(400).json({ error: 'Não é possível estender a reserva: conflito com outra reserva agendada.' });
+        }
+
+        r.data_fim = newFimDate;
+        await r.save();
+
+        res.json({ message: 'Reserva estendida com sucesso!', reserva: r });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: 'Erro ao estender reserva.', detalhes: err.message });
     }
 };
 

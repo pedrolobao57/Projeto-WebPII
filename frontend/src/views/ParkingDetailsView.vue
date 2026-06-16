@@ -1,8 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { PhArrowLeft, PhMapPin, PhLightning, PhShieldCheck, PhHouseLine, PhClock, PhHeart, PhWheelchair, PhMotorcycle, PhInfo } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhMapPin, PhLightning, PhShieldCheck, PhHouseLine, PhClock, PhWheelchair, PhMotorcycle, PhInfo, PhWarning } from '@phosphor-icons/vue'
 import { getParkDetails, getParkSpots } from '../api/parks'
+import { reportSensorError } from '../api/sensors'
 
 const amenityIcon = (name) => {
   const map = {
@@ -31,7 +32,71 @@ const parkDetails = ref({
 })
 
 const levels = ref([])
-const isFavorite = ref(false)
+
+// Report sensor state
+const showReportModal = ref(false)
+const selectedSpotId = ref('')
+const reportDescription = ref('')
+const reporting = ref(false)
+const reportErrorMsg = ref('')
+const reportSuccessMsg = ref('')
+
+const allSpots = computed(() => {
+  const list = []
+  levels.value.forEach(level => {
+    level.spots.forEach(spot => {
+      list.push({
+        id: spot.id,
+        name: `${level.name} - Vaga ${spot.name}`
+      })
+    })
+  })
+  return list
+})
+
+const openReportModal = () => {
+  showReportModal.value = true
+  selectedSpotId.value = ''
+  reportDescription.value = ''
+  reportErrorMsg.value = ''
+  reportSuccessMsg.value = ''
+}
+
+const closeReportModal = () => {
+  showReportModal.value = false
+}
+
+const submitReport = async () => {
+  if (!selectedSpotId.value) {
+    reportErrorMsg.value = 'Por favor, selecione uma vaga.'
+    return
+  }
+  if (!reportDescription.value.trim()) {
+    reportErrorMsg.value = 'Por favor, descreva o problema.'
+    return
+  }
+
+  reporting.value = true
+  reportErrorMsg.value = ''
+  reportSuccessMsg.value = ''
+
+  try {
+    await reportSensorError({
+      id_vaga: Number(selectedSpotId.value),
+      descricao_problema: reportDescription.value
+    })
+    reportSuccessMsg.value = 'Problema de sensor reportado com sucesso!'
+    selectedSpotId.value = ''
+    reportDescription.value = ''
+    setTimeout(() => {
+      closeReportModal()
+    }, 2000)
+  } catch (err) {
+    reportErrorMsg.value = err.message || 'Erro ao submeter o reporte.'
+  } finally {
+    reporting.value = false
+  }
+}
 
 onMounted(async () => {
   try {
@@ -43,24 +108,7 @@ onMounted(async () => {
   } catch (err) {
     console.error('Erro ao carregar detalhes do parque:', err)
   }
-
-  // Load favorite status
-  const favs = JSON.parse(localStorage.getItem('fav_parks') || '[]')
-  isFavorite.value = favs.includes(Number(parkId)) || favs.includes(parkId.toString())
 })
-
-const toggleFavorite = () => {
-  let favs = JSON.parse(localStorage.getItem('fav_parks') || '[]')
-  const numericId = Number(parkId)
-  if (favs.includes(numericId)) {
-    favs = favs.filter(id => id !== numericId)
-    isFavorite.value = false
-  } else {
-    favs.push(numericId)
-    isFavorite.value = true
-  }
-  localStorage.setItem('fav_parks', JSON.stringify(favs))
-}
 
 const selectSpot = (spot) => {
   if (spot.status === 'free') {
@@ -76,8 +124,8 @@ const selectSpot = (spot) => {
         <PhArrowLeft :size="24" />
       </button>
       <div style="display: flex; gap: var(--spacing-2);">
-        <button class="back-btn" @click="toggleFavorite" :title="isFavorite ? 'Remove from Saved' : 'Save Park'">
-          <PhHeart :size="24" :weight="isFavorite ? 'fill' : 'regular'" :color="isFavorite ? 'var(--color-status-occupied)' : 'var(--color-text-primary)'" />
+        <button class="back-btn" @click="openReportModal" title="Report Sensor Issue" style="color: var(--color-status-occupied);">
+          <PhWarning :size="24" />
         </button>
         <button class="back-btn" @click="router.push('/dashboard')" title="Home">
           <PhHouseLine :size="24" />
@@ -151,6 +199,59 @@ const selectSpot = (spot) => {
         </div>
       </div>
     </main>
+
+    <!-- Report Issue Modal -->
+    <transition name="fade">
+      <div v-if="showReportModal" class="modal-overlay" @click.self="closeReportModal">
+        <div class="modal-content bg-card radius-lg border-primary">
+          <div class="modal-header">
+            <h3>Report Sensor Issue</h3>
+            <button class="close-btn" @click="closeReportModal">&times;</button>
+          </div>
+          
+          <div class="modal-body">
+            <p class="description-text">
+              If you notice a physical spot state doesn't match the display, or suspect a sensor error, report it below.
+            </p>
+            
+            <div class="form-group">
+              <label for="spot-select">Select Spot / Space</label>
+              <select id="spot-select" v-model="selectedSpotId" class="form-control bg-base border-primary text-primary">
+                <option value="" disabled>-- Choose a Spot --</option>
+                <option v-for="spot in allSpots" :key="spot.id" :value="spot.id">
+                  {{ spot.name }}
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="issue-desc">Describe the Problem</label>
+              <textarea 
+                id="issue-desc" 
+                v-model="reportDescription" 
+                rows="4" 
+                class="form-control bg-base border-primary text-primary" 
+                placeholder="E.g., Spot is empty but marked red, or sensor light is blinking red..."
+              ></textarea>
+            </div>
+
+            <div v-if="reportErrorMsg" class="alert-msg error-msg">
+              {{ reportErrorMsg }}
+            </div>
+            <div v-if="reportSuccessMsg" class="alert-msg success-msg">
+              {{ reportSuccessMsg }}
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button class="btn-cancel" @click="closeReportModal" :disabled="reporting">Cancel</button>
+            <button class="btn-submit" @click="submitReport" :disabled="reporting">
+              {{ reporting ? 'Sending...' : 'Submit Report' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
@@ -314,5 +415,176 @@ h1 {
   background-color: var(--color-status-reserved);
   color: #000;
   opacity: 0.9;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: var(--spacing-4);
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 480px;
+  background-color: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.modal-header {
+  padding: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  color: var(--color-text-primary);
+}
+
+.modal-body {
+  padding: var(--spacing-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.description-text {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.form-group label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.form-control {
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-bg-base);
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+  border-color: var(--color-accent-cyan);
+}
+
+textarea.form-control {
+  resize: vertical;
+}
+
+.alert-msg {
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.error-msg {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: var(--color-status-occupied);
+  border: 1px solid var(--color-status-occupied);
+}
+
+.success-msg {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: var(--color-status-free);
+  border: 1px solid var(--color-status-free);
+}
+
+.modal-footer {
+  padding: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+}
+
+.btn-cancel {
+  padding: 0.6rem 1.2rem;
+  background-color: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background-color: var(--color-bg-card-lighter);
+  color: var(--color-text-primary);
+}
+
+.btn-submit {
+  padding: 0.6rem 1.2rem;
+  background-color: var(--color-accent-cyan);
+  color: var(--color-bg-base);
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.2s ease;
+}
+
+.btn-submit:hover {
+  filter: brightness(1.1);
+}
+
+.btn-submit:disabled, .btn-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Fade animation */
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
 }
 </style>

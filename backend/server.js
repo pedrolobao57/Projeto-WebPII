@@ -92,6 +92,8 @@ app.get('/users/me/reservations', authenticateToken, ReservaController.listarRes
 app.get('/reservations/:id', authenticateToken, ReservaController.obterReserva);
 // Cancela uma reserva ativa e liberta o estado da respetiva vaga.
 app.delete('/reservations/:id', authenticateToken, ReservaController.cancelarReserva);
+// Estende o tempo de uma reserva ativa.
+app.patch('/reservations/:id/extend', authenticateToken, ReservaController.estenderReserva);
 
 // --- Rotas de Faturação e Pagamentos (Payments) ---
 // Obtém os métodos de pagamento guardados e associados ao perfil do utilizador autenticado.
@@ -107,9 +109,11 @@ app.post('/estacionamentos/saida', EstacionamentoController.registarSaida);
 
 // --- Rotas de Manutenção (Sensores e Parques) ---
 // Cria um relatório de avaria de um sensor associado a uma vaga de estacionamento.
-app.post('/maintenance/report', ManutencaoController.reportarAvaria);
+app.post('/maintenance/report', authenticateToken, ManutencaoController.reportarAvaria);
+// Lista todas as avarias de sensor ativas/pendentes (Apenas Admin)
+app.get('/maintenance/pending', authenticateToken, verifyAdmin, ManutencaoController.listarAvariasPendentes);
 // Conclui a reparação de uma avaria de sensor, voltando a colocá-lo operacional.
-app.post('/maintenance/resolve', ManutencaoController.concluirReparacao);
+app.post('/maintenance/resolve', authenticateToken, verifyAdmin, ManutencaoController.concluirReparacao);
 
 // --- Fluxo de Inicialização do Servidor e da Base de Dados ---
 /**

@@ -16,6 +16,7 @@ import {
 } from '@phosphor-icons/vue'
 import { useAuth } from '../composables/useAuth'
 import { getParks } from '../api/parks'
+import { getPendingReports, resolveReport } from '../api/sensors'
 
 const router = useRouter()
 const { user, logout } = useAuth()
@@ -28,8 +29,47 @@ const initials = computed(() => {
 
 const parks = ref([])
 const activeSessionsCount = ref(24) 
-const activeAlertsCount = ref(3) 
+const activeAlertsCount = ref(0) 
 const loading = ref(true)
+
+const maintenanceAlerts = ref([])
+const alertsLoading = ref(true)
+
+const fetchPendingAlerts = async () => {
+  alertsLoading.value = true
+  try {
+    const data = await getPendingReports()
+    maintenanceAlerts.value = data.map(item => {
+      const parkName = item.Sensor?.Vaga?.Zona?.ParqueEstacionamento?.nome || 'N/A'
+      const zoneName = item.Sensor?.Vaga?.Zona?.nome_zona || ''
+      const spotName = item.Sensor?.Vaga?.numero_vaga || ''
+      const reportedBy = item.Utilizador?.nome ? `Reported by ${item.Utilizador.nome}` : 'Reported by Client'
+      
+      const formattedDate = new Date(item.data_avaria).toLocaleString('pt-PT', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+
+      return {
+        id: item.id_manutencao,
+        sensor: `SN-${item.id_sensor} (${zoneName} - Vaga ${spotName})`,
+        park: parkName,
+        issue: item.descricao_problema,
+        severity: item.estado_manutencao === 'Reportado' ? 'High' : 'Medium',
+        date: formattedDate,
+        reportedBy
+      }
+    })
+    activeAlertsCount.value = maintenanceAlerts.value.length
+  } catch (err) {
+    console.error('Error fetching pending alerts:', err)
+  } finally {
+    alertsLoading.value = false
+  }
+}
 
 // Fetch real parks data
 onMounted(async () => {
@@ -41,6 +81,8 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
+  fetchPendingAlerts()
 })
 
 // Statistics calculations
@@ -77,30 +119,29 @@ const occupancyRate = computed(() => {
   return `${Math.round(rate)}%`
 })
 
-const mockMaintenanceAlerts = ref([
-  { id: 1, sensor: 'SN-045', park: 'Parque Pintos', issue: 'Sensor offline - no ping since 2h', severity: 'High', date: '2026-06-04 17:42' },
-  { id: 2, sensor: 'SN-109', park: 'Casa da Música', issue: 'Battery critical (5%)', severity: 'Medium', date: '2026-06-04 15:10' },
-  { id: 3, sensor: 'SN-212', park: 'Parking 5 Outubro', issue: 'Inconsistent occupancy readings', severity: 'Low', date: '2026-06-04 18:22' }
-])
-
 const mockSystemLogs = ref([
   { id: 1, action: 'Gateway Pintos connected successfully', time: '10m ago', type: 'success' },
   { id: 2, action: 'Price configuration set to default standard', time: '1h ago', type: 'info' },
-  { id: 3, action: 'sensor SN-045 state forced to UNKNOWN', time: '2h ago', type: 'warning' },
-  { id: 4, action: 'Daily occupancy report generated', time: '5h ago', type: 'info' }
+  { id: 3, action: 'Daily occupancy report generated', time: '5h ago', type: 'info' }
 ])
 
-const handleResolveAlert = (id) => {
-  const alert = mockMaintenanceAlerts.value.find(a => a.id === id)
-  mockMaintenanceAlerts.value = mockMaintenanceAlerts.value.filter(a => a.id !== id)
-  activeAlertsCount.value = mockMaintenanceAlerts.value.length
-  
-  mockSystemLogs.value.unshift({
-    id: Date.now(),
-    action: `Alert for ${alert?.sensor || 'Sensor'} resolved by admin`,
-    time: 'Just now',
-    type: 'success'
-  })
+const handleResolveAlert = async (id) => {
+  try {
+    const alert = maintenanceAlerts.value.find(a => a.id === id)
+    await resolveReport({ id_manutencao: id, novo_estado_sensor: 'LIVRE' })
+    
+    await fetchPendingAlerts()
+    
+    mockSystemLogs.value.unshift({
+      id: Date.now(),
+      action: `Alert for ${alert?.sensor || 'Sensor'} resolved by admin`,
+      time: 'Just now',
+      type: 'success'
+    })
+  } catch (err) {
+    console.error('Error resolving alert:', err)
+    alert('Erro ao resolver alerta de sensor: ' + (err.message || err.error || ''))
+  }
 }
 
 const handleSignOut = () => {
@@ -197,11 +238,14 @@ const goToProfile = () => {
       <div class="dashboard-section mt-6">
         <h3 class="section-title">Critical Sensor Alerts</h3>
         <div class="alerts-list">
-          <div v-if="mockMaintenanceAlerts.length === 0" class="alert-empty bg-card radius-lg">
+          <div v-if="alertsLoading" class="loading-state">
+            <span class="spinner"></span> Loading alerts...
+          </div>
+          <div v-else-if="maintenanceAlerts.length === 0" class="alert-empty bg-card radius-lg">
             <PhCheckCircle :size="24" class="text-green" />
             <span>All parking sensors are fully operational. No alerts.</span>
           </div>
-          <div v-else v-for="alert in mockMaintenanceAlerts" :key="alert.id" class="alert-card bg-card radius-lg">
+          <div v-else v-for="alert in maintenanceAlerts" :key="alert.id" class="alert-card bg-card radius-lg">
             <div class="alert-header">
               <div class="alert-badge" :class="alert.severity.toLowerCase()">
                 {{ alert.severity }} Priority
@@ -211,7 +255,10 @@ const goToProfile = () => {
             <div class="alert-body">
               <strong>Sensor: {{ alert.sensor }}</strong>
               <p>{{ alert.issue }}</p>
-              <span class="alert-park text-secondary">{{ alert.park }}</span>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-2);">
+                <span class="alert-park text-secondary" style="font-size: 0.8rem;">{{ alert.park }}</span>
+                <span class="alert-reporter text-cyan" style="font-size: 0.8rem; font-weight: 500;">{{ alert.reportedBy }}</span>
+              </div>
             </div>
             <button class="btn-resolve" @click="handleResolveAlert(alert.id)">
               Mark as Resolved

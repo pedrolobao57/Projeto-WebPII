@@ -5,7 +5,6 @@ import {
   PhArrowLeft, 
   PhArrowUpRight,
   PhMapPin,
-  PhQrCode,
   PhCheckCircle,
   PhHouseLine
 } from '@phosphor-icons/vue'
@@ -47,9 +46,6 @@ onMounted(async () => {
 })
 
 const goBack = () => router.back()
-const showQR = () => {
-  // Logic to show QR code modal
-}
 const arrive = async () => {
   try {
     const payload = {
@@ -64,12 +60,61 @@ const arrive = async () => {
 
     await apiClient.post('/estacionamentos/entrada', payload)
     alert('Entrada no parque registada com sucesso!')
-    router.push('/dashboard')
+    
+    // Refresh details to lock screen in parked state
+    const data = await getReservation(payload.id_reserva)
+    activeReservation.value = data
   } catch (err) {
     alert(err.error || err.message || 'Erro ao registar a entrada no parque.')
     console.error('Erro ao registar entrada:', err)
   }
 }
+
+const extendTime = async () => {
+  const input = prompt('Por quantas horas deseja estender a sua reserva? (ex: 1, 2)', '1')
+  if (input === null) return
+  const hours = parseFloat(input)
+  if (isNaN(hours) || hours <= 0) {
+    alert('Por favor insira um número de horas válido.')
+    return
+  }
+  
+  try {
+    const resId = activeReservation.value.id || activeReservation.value.id_reserva
+    await apiClient.patch(`/reservations/${resId}/extend`, { hours })
+    alert('Reserva estendida com sucesso!')
+    
+    const data = await getReservation(resId)
+    activeReservation.value = data
+  } catch (err) {
+    alert(err.error || err.message || 'Erro ao estender a reserva.')
+  }
+}
+
+const leavePark = async () => {
+  if (!confirm('Deseja realmente registar a saída do parque de estacionamento?')) return
+  
+  try {
+    const estId = activeReservation.value.estacionamentoId
+    if (!estId) throw new Error('Registo de estacionamento ativo não encontrado.')
+    
+    const userProfile = JSON.parse(localStorage.getItem('user') || '{}')
+    
+    const payload = {
+      id_estacionamento: Number(estId),
+      metodo_pagamento: 'MBWAY',
+      id_utilizador: Number(userProfile.id) || null
+    }
+    
+    const response = await apiClient.post('/estacionamentos/saida', payload)
+    alert(`Saída registada com sucesso!\nValor pago: €${response.valorTotal}`)
+    
+    router.push('/dashboard')
+  } catch (err) {
+    alert(err.error || err.message || 'Erro ao registar a saída.')
+  }
+}
+
 const handleCancel = async () => {
   if (confirm('Are you sure you want to cancel this reservation?')) {
     try {
@@ -121,7 +166,7 @@ const handleCancel = async () => {
     </div>
 
     <!-- Direction Instructions -->
-    <div class="direction-card">
+    <div class="direction-card" v-if="!activeReservation.hasEntered">
       <div class="direction-icon bg-cyan">
         <PhArrowUpRight :size="24" color="var(--color-bg-base)" weight="bold" />
       </div>
@@ -143,35 +188,56 @@ const handleCancel = async () => {
         </div>
       </div>
 
-      <div class="trip-stats">
-        <div class="stat-box bg-card">
-          <span class="stat-value">2 min</span>
-          <span class="stat-label">Est. time</span>
+      <!-- Parked State View -->
+      <template v-if="activeReservation.hasEntered">
+        <div class="parked-status-card bg-card radius-md mb-6">
+          <div class="status-indicator">
+            <span class="pulse-green"></span>
+            <strong>Status: Currently Parked</strong>
+          </div>
+          <p class="text-secondary" style="font-size: 0.85rem; margin-top: 0.25rem;">
+            Your vehicle has entered the facility. You can extend your time or finalize and pay below.
+          </p>
         </div>
-        <div class="stat-box bg-card">
-          <span class="stat-value">45m</span>
-          <span class="stat-label">Distance</span>
-        </div>
-        <div class="stat-box bg-card">
-          <span class="stat-value">{{ activeReservation.level.replace('Level ', 'L').replace('Piso ', 'L') }}</span>
-          <span class="stat-label">Floor</span>
-        </div>
-      </div>
 
-      <div class="action-buttons">
-        <button class="btn-secondary qr-btn" @click="showQR">
-          <PhQrCode :size="20" />
-          <span>Show QR</span>
-        </button>
-        <button class="btn-primary arrive-btn" @click="arrive">
-          <PhCheckCircle :size="20" />
-          <span>I've Arrived</span>
-        </button>
-      </div>
+        <div class="action-buttons">
+          <button class="btn-secondary w-half" @click="extendTime">
+            <span>Extend Time</span>
+          </button>
+          <button class="btn-primary arrive-btn w-half btn-danger-action" @click="leavePark">
+            <span>Leave Park & Pay</span>
+          </button>
+        </div>
+      </template>
 
-      <button class="btn-danger w-full mt-2" @click="handleCancel">
-        Cancel Reservation
-      </button>
+      <!-- Standard Driving State View -->
+      <template v-else>
+        <div class="trip-stats">
+          <div class="stat-box bg-card">
+            <span class="stat-value">2 min</span>
+            <span class="stat-label">Est. time</span>
+          </div>
+          <div class="stat-box bg-card">
+            <span class="stat-value">45m</span>
+            <span class="stat-label">Distance</span>
+          </div>
+          <div class="stat-box bg-card">
+            <span class="stat-value">{{ activeReservation.level?.replace('Level ', 'L').replace('Piso ', 'L') }}</span>
+            <span class="stat-label">Floor</span>
+          </div>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn-primary w-full" @click="arrive">
+            <PhCheckCircle :size="20" />
+            <span>I've Arrived</span>
+          </button>
+        </div>
+
+        <button class="btn-danger w-full mt-2" @click="handleCancel">
+          Cancel Reservation
+        </button>
+      </template>
       
       <div class="footer-note">
         Follow GPS directions to navigate to your parking spot
@@ -422,6 +488,51 @@ const handleCancel = async () => {
 .btn-danger:hover {
   background-color: var(--color-status-occupied);
   color: #ffffff;
+}
+ 
+.btn-danger-action {
+  background-color: var(--color-status-occupied) !important;
+  color: var(--color-text-primary) !important;
+  border: none;
+}
+.btn-danger-action:hover {
+  opacity: 0.9;
+}
+
+.w-half {
+  flex: 1;
+}
+
+.parked-status-card {
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  margin-bottom: var(--spacing-4);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--color-status-free);
+}
+
+.pulse-green {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-status-free);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--color-status-free);
+  animation: pulseGreen 2s infinite;
+}
+
+@keyframes pulseGreen {
+  0% { transform: scale(0.9); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.7; }
+  100% { transform: scale(0.9); opacity: 1; }
+}
+
+.mb-6 {
+  margin-bottom: 1.5rem;
 }
 
 .w-full {

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { PhGear, PhArrowLeft, PhMapPin, PhCurrencyEur, PhClock, PhQrCode, PhMedal } from '@phosphor-icons/vue'
+import { PhGear, PhArrowLeft, PhMapPin, PhCurrencyEur, PhClock, PhMedal } from '@phosphor-icons/vue'
 import { useAuth } from '../composables/useAuth'
 import { getUserReservations } from '../api/reservations'
 import { getParks } from '../api/parks'
@@ -19,7 +19,6 @@ const initials = computed(() => {
 
 const reservations = ref([])
 const showSavedDetails = ref(false)
-const savedParks = ref([])
 
 const toggleSaved = () => {
   showSavedDetails.value = !showSavedDetails.value
@@ -45,7 +44,7 @@ const thisMonthHours = computed(() => {
   })
   
   const hours = totalMinutes / 60
-  return hours > 0 ? `${Math.round(hours)}h` : '0h'
+  return hours > 0 ? `${Number(hours.toFixed(1))}h` : '0h'
 })
 
 onMounted(async () => {
@@ -54,15 +53,6 @@ onMounted(async () => {
     reservations.value = data
   } catch (err) {
     console.error('Erro ao carregar reservas:', err)
-  }
-
-  // Load favorite parks
-  try {
-    const allParks = await getParks()
-    const favIds = JSON.parse(localStorage.getItem('fav_parks') || '[]')
-    savedParks.value = allParks.filter(p => favIds.includes(Number(p.id)) || favIds.includes(p.id.toString()))
-  } catch (err) {
-    console.error('Erro ao carregar favoritos:', err)
   }
 
   // Refresh user profile details to get latest loyalty points
@@ -173,22 +163,6 @@ const goToNav = (resId) => {
               <span class="savings-label">Total Money Saved</span>
               <span class="savings-value text-cyan">€127.00</span>
             </div>
-            
-            <div class="saved-parks-section">
-              <h5>❤️ My Saved Parks</h5>
-              <div v-if="savedParks.length === 0" class="no-parks text-secondary">
-                No favorite parks saved yet. You can favorite parks on their detail pages.
-              </div>
-              <div v-else class="saved-parks-list">
-                <div v-for="park in savedParks" :key="park.id" class="saved-park-item" @click="router.push(`/parking/${park.id}`)">
-                  <div class="park-info-left">
-                    <PhMapPin :size="16" class="text-cyan" />
-                    <span class="park-name">{{ park.name }}</span>
-                  </div>
-                  <span class="park-dist text-cyan">{{ park.price }}/h • {{ park.distance }}</span>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </transition>
@@ -224,9 +198,6 @@ const goToNav = (resId) => {
               <span>{{ res.time }}</span>
             </div>
           </div>
-          <button class="qr-btn" @click.stop="goToNav(res.id)">
-            <PhQrCode :size="24" color="var(--color-bg-base)" />
-          </button>
         </div>
       </div>
     </main>
