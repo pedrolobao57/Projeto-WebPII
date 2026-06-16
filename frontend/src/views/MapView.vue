@@ -8,7 +8,7 @@ import 'leaflet/dist/leaflet.css'
 
 const router = useRouter()
 
-const filters = ['Price', 'Distance', 'EV Charging', 'Covered']
+const filters = ['EV Charging', 'Covered', 'Security', 'Accessible']
 const activeFilters = ref([])
 const searchQuery = ref('')
 const nearbyLocations = ref([])
@@ -92,26 +92,18 @@ const filteredLocations = computed(() => {
 
   // Apply filters
   activeFilters.value.forEach(filter => {
-    if (filter === 'Price') {
-      // Sort by price ascending
-      list = [...list].sort((a, b) => {
-        const valA = parseFloat(a.price.replace(/[^0-9.]/g, ''))
-        const valB = parseFloat(b.price.replace(/[^0-9.]/g, ''))
-        return valA - valB
-      })
-    } else if (filter === 'Distance') {
-      // Sort by distance ascending
-      list = [...list].sort((a, b) => {
-        const valA = parseFloat(a.distance.replace(/[^0-9.]/g, ''))
-        const valB = parseFloat(b.distance.replace(/[^0-9.]/g, ''))
-        return valA - valB
-      })
-    } else if (filter === 'EV Charging') {
-      // Show only parks that have electric charging spots (simulate by park id % 2 === 1)
-      list = list.filter(l => l.id % 2 === 1)
+    if (filter === 'EV Charging') {
+      // Show only parks that have electric charging spots
+      list = list.filter(l => l.amenities && l.amenities.includes('EV Charging'))
     } else if (filter === 'Covered') {
-      // Show only covered parks (simulate by park id % 2 === 0)
-      list = list.filter(l => l.id % 2 === 0)
+      // Show only covered parks
+      list = list.filter(l => l.amenities && l.amenities.includes('Covered'))
+    } else if (filter === 'Security') {
+      // Show only secure parks
+      list = list.filter(l => l.amenities && l.amenities.includes('Security'))
+    } else if (filter === 'Accessible') {
+      // Show only accessible parks
+      list = list.filter(l => l.amenities && l.amenities.includes('Accessible'))
     }
   })
 

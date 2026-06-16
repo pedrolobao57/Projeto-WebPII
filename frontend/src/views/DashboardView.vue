@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { PhGear, PhArrowLeft, PhMapPin, PhCurrencyDollar, PhClock, PhQrCode, PhMedal } from '@phosphor-icons/vue'
+import { PhGear, PhArrowLeft, PhMapPin, PhCurrencyEur, PhClock, PhQrCode, PhMedal } from '@phosphor-icons/vue'
 import { useAuth } from '../composables/useAuth'
 import { getUserReservations } from '../api/reservations'
 import { getParks } from '../api/parks'
@@ -77,7 +77,7 @@ onMounted(async () => {
 const userLoyaltyPoints = computed(() => user.value?.loyaltyPoints || 0)
 
 const showRedeemInfo = () => {
-  alert(`🌟 Loyalty Points: ${userLoyaltyPoints.value}\n\nYou can use your points at checkout to receive a discount on your next reservation!\n\nRate: 100 points = $1.00 discount.`)
+  alert(`🌟 Loyalty Points: ${userLoyaltyPoints.value}\n\nYou can use your points at checkout to receive a discount on your next reservation!\n\nRate: 100 points = €1.00 discount.`)
 }
 
 const filteredReservations = computed(() => {
@@ -133,9 +133,9 @@ const goToNav = (resId) => {
         
         <div class="stat-card bg-card radius-lg" @click="toggleSaved">
           <div class="icon-wrapper green">
-            <PhCurrencyDollar :size="20" weight="fill" />
+            <PhCurrencyEur :size="20" weight="fill" />
           </div>
-          <h3>$127</h3>
+          <h3>€127</h3>
           <p>Saved</p>
         </div>
 
@@ -152,26 +152,26 @@ const goToNav = (resId) => {
       <transition name="expand">
         <div v-if="showSavedDetails" class="savings-detail-card bg-card radius-lg mb-6">
           <div class="savings-header">
-            <h4><PhCurrencyDollar :size="20" weight="fill" class="text-green" /> Savings Breakdown</h4>
+            <h4><PhCurrencyEur :size="20" weight="fill" class="text-green" /> Savings Breakdown</h4>
             <button class="close-detail-btn" @click="showSavedDetails = false">&times;</button>
           </div>
           <div class="savings-body">
             <div class="savings-row">
               <span class="savings-label">🌟 Loyalty Points Discount</span>
-              <span class="savings-value text-green">-$25.00</span>
+              <span class="savings-value text-green">-€25.00</span>
             </div>
             <div class="savings-row">
               <span class="savings-label">⏱️ Off-Peak Bookings</span>
-              <span class="savings-value text-green">-$52.00</span>
+              <span class="savings-value text-green">-€52.00</span>
             </div>
             <div class="savings-row">
               <span class="savings-label">🎟️ Promo Codes Applied</span>
-              <span class="savings-value text-green">-$50.00</span>
+              <span class="savings-value text-green">-€50.00</span>
             </div>
             <div class="divider"></div>
             <div class="savings-row total-row">
               <span class="savings-label">Total Money Saved</span>
-              <span class="savings-value text-cyan">$127.00</span>
+              <span class="savings-value text-cyan">€127.00</span>
             </div>
             
             <div class="saved-parks-section">

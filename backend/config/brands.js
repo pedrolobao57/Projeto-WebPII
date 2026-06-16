@@ -65,6 +65,7 @@ const brandModels = {
   "Volvo": ["XC40", "XC60", "XC90", "S60", "S90", "V60", "V90", "C40", "EX30", "EX90"]
 };
 
-const brands = Object.keys(brandModels);
-export { brandModels };
-export default brands;
+module.exports = {
+  brandModels,
+  brands: Object.keys(brandModels)
+};

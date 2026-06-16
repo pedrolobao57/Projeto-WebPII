@@ -185,21 +185,21 @@ const handlePayment = async () => {
           <div class="price-details">
             <div class="detail-row">
               <span class="label">Parking fee</span>
-              <span class="value">${{ ((pendingRes.hourlyRate || 8) * (pendingRes.duration || 0)).toFixed(2) }}</span>
+              <span class="value">€{{ ((pendingRes.hourlyRate || 8) * (pendingRes.duration || 0)).toFixed(2) }}</span>
             </div>
             <div class="detail-row">
               <span class="label">Service fee</span>
-              <span class="value">$1.50</span>
+              <span class="value">€1.50</span>
             </div>
             <div v-if="pointsDiscount > 0" class="detail-row text-cyan-row">
               <span class="label text-cyan">🌟 Loyalty Discount</span>
-              <span class="value text-cyan">-${{ pointsDiscount.toFixed(2) }}</span>
+              <span class="value text-cyan">-€{{ pointsDiscount.toFixed(2) }}</span>
             </div>
           </div>
           
           <div class="total-row">
             <span>Total</span>
-            <span class="total-amount text-cyan">${{ finalTotal.toFixed(2) }}</span>
+            <span class="total-amount text-cyan">€{{ finalTotal.toFixed(2) }}</span>
           </div>
         </div>
       </div>
@@ -241,7 +241,7 @@ const handlePayment = async () => {
               <span class="star-icon">🌟</span>
               <div class="loyalty-text">
                 <span class="loyalty-pts-title">Use Loyalty Points</span>
-                <span class="loyalty-pts-subtitle">You have {{ userLoyaltyPoints }} points. Use {{ pointsToUse }} points for a ${{ pointsDiscount.toFixed(2) }} discount.</span>
+                <span class="loyalty-pts-subtitle">You have {{ userLoyaltyPoints }} points. Use {{ pointsToUse }} points for a €{{ pointsDiscount.toFixed(2) }} discount.</span>
               </div>
             </div>
             <label class="switch">
@@ -260,7 +260,7 @@ const handlePayment = async () => {
           <button type="button" class="apply-btn" :disabled="!promoCode" @click="applyPromo">Apply</button>
         </div>
         <div v-if="isPromoApplied" style="color: #4ade80; font-size: 0.85rem; margin-top: 0.5rem; font-weight: 500;">
-          Promo code "Codigo VSKI" applied successfully! Price set to $0.67.
+          Promo code "Codigo VSKI" applied successfully! Price set to €0.67.
         </div>
       </div>
 
@@ -271,7 +271,7 @@ const handlePayment = async () => {
 
     <div class="bottom-action">
       <button class="btn-primary w-full" :disabled="loading" @click="handlePayment">
-        {{ loading ? 'Processing Payment...' : `Confirm & Pay $${finalTotal.toFixed(2)}` }}
+        {{ loading ? 'Processing Payment...' : `Confirm & Pay €${finalTotal.toFixed(2)}` }}
       </button>
     </div>
   </div>

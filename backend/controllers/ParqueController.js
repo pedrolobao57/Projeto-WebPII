@@ -9,6 +9,12 @@ const ParqueEstacionamento = require('../models/parque_estacionamento');
 const Zona = require('../models/zona');
 const Vaga = require('../models/vaga');
 
+const PARK_AMENITIES = {
+  1: ['EV Charging', 'Covered', 'Security', '24/7', 'Accessible'],           // Parque Pintos
+  2: ['Covered', '24/7', 'Accessible', 'Motorcycle'],                        // SABA - Casa da Música
+  3: ['EV Charging', 'Accessible']                                           // Parking 5 Outubro
+};
+
 /**
  * @function listarParques
  * @async
@@ -32,11 +38,13 @@ exports.listarParques = async (req, res) => {
             
             let totalSpots = 0;
             let availableSpots = 0;
+            let evCount = 0;
             
             // Só executa o count se existirem zonas associadas a este parque.
             if (zoneIds.length > 0) {
                 totalSpots = await Vaga.count({ where: { id_zona: zoneIds } });
                 availableSpots = await Vaga.count({ where: { id_zona: zoneIds, estado: 'LIVRE' } });
+                evCount = await Vaga.count({ where: { id_zona: zoneIds, tipo_vaga: 'ELETRICO' } });
             }
             
             // Constrói o modelo de resposta formatado para consumo do frontend.
@@ -47,8 +55,11 @@ exports.listarParques = async (req, res) => {
                 distance: `${(park.id_parque * 0.3).toFixed(1)} mi`,
                 spots: `${availableSpots}/${totalSpots}`,
                 // Preço estimado com base no índice numérico do parque (para demonstração)
-                price: `$${(park.id_parque * 2 + 4)}`,
-                isAvailable: availableSpots > 0
+                price: `€${(park.id_parque * 2 + 4)}`,
+                isAvailable: availableSpots > 0,
+                amenities: PARK_AMENITIES[park.id_parque] || ['Security'],
+                hasEV: evCount > 0,
+                evSpots: evCount
             });
         }
         res.json(results);
@@ -80,11 +91,13 @@ exports.obterParque = async (req, res) => {
         
         let totalSpots = 0;
         let availableSpots = 0;
+        let evCount = 0;
         
         // Efetua a contagem acumulada de vagas livres/totais nas zonas deste parque.
         if (zoneIds.length > 0) {
             totalSpots = await Vaga.count({ where: { id_zona: zoneIds } });
             availableSpots = await Vaga.count({ where: { id_zona: zoneIds, estado: 'LIVRE' } });
+            evCount = await Vaga.count({ where: { id_zona: zoneIds, tipo_vaga: 'ELETRICO' } });
         }
         
         res.json({
@@ -93,7 +106,10 @@ exports.obterParque = async (req, res) => {
             location: park.localizacao,
             totalSpots,
             availableSpots,
-            price: (park.id_parque * 2 + 4)
+            price: (park.id_parque * 2 + 4),
+            amenities: PARK_AMENITIES[park.id_parque] || ['Security'],
+            hasEV: evCount > 0,
+            evSpots: evCount
         });
     } catch (err) {
         console.error(err);

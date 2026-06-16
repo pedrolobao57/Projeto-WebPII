@@ -1,8 +1,20 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { PhArrowLeft, PhMapPin, PhLightning, PhShieldCheck, PhHouseLine, PhClock, PhHeart } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhMapPin, PhLightning, PhShieldCheck, PhHouseLine, PhClock, PhHeart, PhWheelchair, PhMotorcycle, PhInfo } from '@phosphor-icons/vue'
 import { getParkDetails, getParkSpots } from '../api/parks'
+
+const amenityIcon = (name) => {
+  const map = {
+    'EV Charging': PhLightning,
+    'Covered': PhHouseLine,
+    'Security': PhShieldCheck,
+    '24/7': PhClock,
+    'Accessible': PhWheelchair,
+    'Motorcycle': PhMotorcycle
+  }
+  return map[name] || PhInfo
+}
 
 const router = useRouter()
 const route = useRoute()
@@ -87,7 +99,7 @@ const selectSpot = (spot) => {
           <span class="label">Available</span>
         </div>
         <div class="stat bg-card">
-          <span class="value">${{ parkDetails.price }}</span>
+          <span class="value">€{{ parkDetails.price }}</span>
           <span class="label">Per Hour</span>
         </div>
         <div class="stat bg-card">
@@ -99,21 +111,9 @@ const selectSpot = (spot) => {
       <div class="amenities-section">
         <h3>Amenities & Information</h3>
         <div class="amenities-grid">
-          <div class="amenity-badge bg-card">
-            <PhLightning :size="18" class="text-cyan" />
-            <span>EV Charging</span>
-          </div>
-          <div class="amenity-badge bg-card">
-            <PhHouseLine :size="18" class="text-cyan" />
-            <span>Covered</span>
-          </div>
-          <div class="amenity-badge bg-card">
-            <PhShieldCheck :size="18" class="text-cyan" />
-            <span>Security</span>
-          </div>
-          <div class="amenity-badge bg-card">
-            <PhClock :size="18" class="text-cyan" />
-            <span>24/7</span>
+          <div v-for="amenity in parkDetails.amenities" :key="amenity" class="amenity-badge bg-card">
+            <component :is="amenityIcon(amenity)" :size="18" class="text-cyan" />
+            <span>{{ amenity }}</span>
           </div>
         </div>
       </div>

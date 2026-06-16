@@ -41,6 +41,33 @@ exports.criarReserva = async (req, res) => {
 
         const dataInicioDate = new Date(data_inicio);
         const dataFimDate = new Date(data_fim);
+        const now = Date.now();
+
+        // Validations:
+        // 1. Start date in the past
+        if (dataInicioDate.getTime() < now - 60000) { // 1 min grace period for request latency
+            return res.status(400).json({ error: 'A hora de início não pode ser anterior à hora atual.' });
+        }
+
+        // 2. End date before or equal to start date
+        if (dataFimDate.getTime() <= dataInicioDate.getTime()) {
+            return res.status(400).json({ error: 'A hora de fim deve ser posterior à hora de início.' });
+        }
+
+        // 3. Duration validation (min 30 min, max 24 hours)
+        const diffMinutes = (dataFimDate.getTime() - dataInicioDate.getTime()) / 60000;
+        if (diffMinutes < 30) {
+            return res.status(400).json({ error: 'A duração mínima da reserva é de 30 minutos.' });
+        }
+        if (diffMinutes > 24 * 60) {
+            return res.status(400).json({ error: 'A duração máxima da reserva é de 24 horas.' });
+        }
+
+        // 4. Future reservation limit (max 30 days)
+        const maxFutureTime = now + 30 * 24 * 60 * 60 * 1000;
+        if (dataInicioDate.getTime() > maxFutureTime) {
+            return res.status(400).json({ error: 'As reservas estão limitadas a no máximo 30 dias no futuro.' });
+        }
 
         // --- Verificação de Sobreposição Temporal de Reservas ---
         // Procura alguma reserva existente para a mesma vaga, em estados ativos, cujo intervalo coincida:

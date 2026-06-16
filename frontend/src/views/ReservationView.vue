@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { 
   PhArrowLeft, 
@@ -8,8 +8,12 @@ import {
   PhHouseLine, 
   PhWheelchair,
   PhCalendarBlank,
-  PhClock
+  PhClock,
+  PhWarning,
+  PhMotorcycle,
+  PhInfo
 } from '@phosphor-icons/vue'
+import { getParkDetails } from '../api/parks'
 
 const router = useRouter()
 const route = useRoute()
@@ -19,9 +23,48 @@ const spotNumber = computed(() => route.query.spotNumber || 'A-02')
 const parkName = computed(() => route.query.parkName || 'Downtown Plaza')
 const hourlyRate = computed(() => Number(route.query.price) || 8)
 
-const date = ref(new Date().toISOString().split('T')[0])
-const startTime = ref('14:00')
-const endTime = ref('17:00')
+// Date Helpers
+const getLocalDateString = (d) => {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const todayDate = new Date()
+const todayStr = computed(() => getLocalDateString(todayDate))
+const maxDate = new Date(todayDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+const maxDateStr = computed(() => getLocalDateString(maxDate))
+
+// Min start time (rounded to next 30 min)
+const getMinStartTime = () => {
+  const now = new Date()
+  let minutes = now.getMinutes()
+  let hours = now.getHours()
+  
+  if (minutes === 0) {
+    // aligned
+  } else if (minutes <= 30) {
+    minutes = 30
+  } else {
+    minutes = 0
+    hours = (hours + 1) % 24
+  }
+  
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`
+}
+
+const minStartTimeForToday = computed(() => getMinStartTime())
+
+// Initialize defaults to avoid immediate validation errors on page load
+const defaultStart = getMinStartTime()
+const [defH, defM] = defaultStart.split(':').map(Number)
+const defEndH = (defH + 1) % 24
+const defaultEnd = `${String(defEndH).padStart(2, '0')}:${String(defM).padStart(2, '0')}`
+
+const date = ref(todayStr.value)
+const startTime = ref(defaultStart)
+const endTime = ref(defaultEnd)
 
 const serviceFee = 1.5
 
@@ -31,16 +74,70 @@ const duration = computed(() => {
   const [startH, startM] = startTime.value.split(':').map(Number)
   const [endH, endM] = endTime.value.split(':').map(Number)
   
-  let diffMin = (endH * 60 + endM) - (startH * 60 + startM)
-  if (diffMin < 0) diffMin += 24 * 60
-  
+  const diffMin = (endH * 60 + endM) - (startH * 60 + startM)
   return Number((diffMin / 60).toFixed(1))
 })
 
-const total = computed(() => (hourlyRate.value * duration.value) + serviceFee)
+const total = computed(() => {
+  const d = duration.value > 0 ? duration.value : 0
+  return (hourlyRate.value * d) + serviceFee
+})
+
+const parkAmenities = ref([])
+
+const amenityIcon = (name) => {
+  const map = {
+    'EV Charging': PhLightning,
+    'Covered': PhHouseLine,
+    'Security': PhShieldCheck,
+    '24/7': PhClock,
+    'Accessible': PhWheelchair,
+    'Motorcycle': PhMotorcycle
+  }
+  return map[name] || PhInfo
+}
+
+onMounted(async () => {
+  try {
+    const parkId = route.query.parkId || '1'
+    const details = await getParkDetails(parkId)
+    parkAmenities.value = details.amenities || []
+  } catch (err) {
+    console.error('Erro ao buscar amenities do parque:', err)
+  }
+})
+
+// Validators
+const isDateValid = computed(() => {
+  if (!date.value) return false
+  return date.value >= todayStr.value && date.value <= maxDateStr.value
+})
+
+const isStartTimeValid = computed(() => {
+  if (!startTime.value) return false
+  if (date.value === todayStr.value) {
+    return startTime.value >= minStartTimeForToday.value
+  }
+  return true
+})
+
+const isEndTimeValid = computed(() => {
+  if (!startTime.value || !endTime.value) return false
+  return endTime.value > startTime.value
+})
+
+const isDurationValid = computed(() => {
+  const d = duration.value
+  return d >= 0.5 && d <= 24
+})
+
+const isFormValid = computed(() => {
+  return isDateValid.value && isStartTimeValid.value && isEndTimeValid.value && isDurationValid.value
+})
 
 const goBack = () => router.back()
 const proceedToPayment = () => {
+  if (!isFormValid.value) return
   localStorage.setItem('pending_reservation', JSON.stringify({
     spotId: spotId,
     parkId: route.query.parkId,
@@ -49,7 +146,7 @@ const proceedToPayment = () => {
     date: date.value,
     startTime: startTime.value,
     endTime: endTime.value,
-    duration: duration.value,
+    duration: duration.value > 0 ? duration.value : 0,
     hourlyRate: hourlyRate.value,
     total: total.value
   }))
@@ -82,21 +179,9 @@ const proceedToPayment = () => {
       <div class="section">
         <h3 class="section-title">Amenities</h3>
         <div class="amenities-grid">
-          <div class="amenity-badge bg-card">
-            <PhLightning :size="18" class="text-cyan" />
-            <span>EV Charger</span>
-          </div>
-          <div class="amenity-badge bg-card">
-            <PhHouseLine :size="18" class="text-cyan" />
-            <span>Covered</span>
-          </div>
-          <div class="amenity-badge bg-card">
-            <PhShieldCheck :size="18" class="text-cyan" />
-            <span>Security</span>
-          </div>
-          <div class="amenity-badge bg-card">
-            <PhWheelchair :size="18" class="text-cyan" />
-            <span>Accessible</span>
+          <div v-for="amenity in parkAmenities" :key="amenity" class="amenity-badge bg-card">
+            <component :is="amenityIcon(amenity)" :size="18" class="text-cyan" />
+            <span>{{ amenity }}</span>
           </div>
         </div>
       </div>
@@ -109,7 +194,17 @@ const proceedToPayment = () => {
             <label class="form-label">Date</label>
             <div class="input-wrapper">
               <PhCalendarBlank class="input-icon" :size="20" />
-              <input type="date" class="input-field with-icon" v-model="date" />
+              <input 
+                type="date" 
+                class="input-field with-icon" 
+                v-model="date" 
+                :min="todayStr" 
+                :max="maxDateStr"
+                :class="{ invalid: date && !isDateValid, valid: date && isDateValid }" 
+              />
+            </div>
+            <div v-if="date && !isDateValid" class="field-error-msg animate-fade-in">
+              <PhWarning :size="16" /> A data deve ser entre hoje e os próximos 30 dias.
             </div>
           </div>
 
@@ -118,7 +213,15 @@ const proceedToPayment = () => {
               <label class="form-label">Start Time</label>
               <div class="input-wrapper">
                 <PhClock class="input-icon" :size="20" />
-                <input type="time" class="input-field with-icon" v-model="startTime" />
+                <input 
+                  type="time" 
+                  class="input-field with-icon" 
+                  v-model="startTime" 
+                  :class="{ invalid: startTime && !isStartTimeValid, valid: startTime && isStartTimeValid }"
+                />
+              </div>
+              <div v-if="startTime && !isStartTimeValid" class="field-error-msg animate-fade-in">
+                <PhWarning :size="16" /> A hora de início deve ser posterior à hora atual.
               </div>
             </div>
             
@@ -126,7 +229,20 @@ const proceedToPayment = () => {
               <label class="form-label">End Time</label>
               <div class="input-wrapper">
                 <PhClock class="input-icon" :size="20" />
-                <input type="time" class="input-field with-icon" v-model="endTime" />
+                <input 
+                  type="time" 
+                  class="input-field with-icon" 
+                  v-model="endTime" 
+                  :class="{ invalid: endTime && (!isEndTimeValid || !isDurationValid), valid: endTime && isEndTimeValid && isDurationValid }"
+                />
+              </div>
+              <div v-if="endTime && !isEndTimeValid" class="field-error-msg animate-fade-in">
+                <PhWarning :size="16" /> A hora de fim deve ser posterior à hora de início.
+              </div>
+              <div v-else-if="endTime && isEndTimeValid && !isDurationValid" class="field-error-msg animate-fade-in">
+                <PhWarning :size="16" />
+                <span v-if="duration < 0.5">Duração mínima de 30 minutos.</span>
+                <span v-else-if="duration > 24">Duração máxima de 24 horas.</span>
               </div>
             </div>
           </div>
@@ -138,25 +254,25 @@ const proceedToPayment = () => {
         
         <div class="breakdown-row">
           <span class="text-secondary">Hourly rate × {{ duration }} hours</span>
-          <span>${{ hourlyRate }} × {{ duration }}</span>
+          <span>€{{ hourlyRate }} × {{ duration }}</span>
         </div>
         
         <div class="breakdown-row">
           <span class="text-secondary">Service fee</span>
-          <span>${{ serviceFee.toFixed(2) }}</span>
+          <span>€{{ serviceFee.toFixed(2) }}</span>
         </div>
         
         <div class="divider"></div>
         
         <div class="breakdown-row total-row">
           <span>Total</span>
-          <span class="total-price">${{ total.toFixed(2) }}</span>
+          <span class="total-price">€{{ total.toFixed(2) }}</span>
         </div>
       </div>
     </main>
 
     <div class="bottom-action">
-      <button class="btn-primary w-full" @click="proceedToPayment">
+      <button class="btn-primary w-full" :disabled="!isFormValid" @click="proceedToPayment">
         Reserve Now
       </button>
     </div>
@@ -320,5 +436,23 @@ input[type="time"]::-webkit-calendar-picker-indicator {
 
 .w-full {
   width: 100%;
+}
+input.invalid {
+  border-color: #ff4d4d !important;
+}
+input.valid {
+  border-color: #4ade80 !important;
+}
+.field-error-msg {
+  color: #ff4d4d;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

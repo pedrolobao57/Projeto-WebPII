@@ -71,6 +71,8 @@ app.patch('/users/me', authenticateToken, UtilizadorController.updateProfile);
 app.post('/users/me/change-password', authenticateToken, UtilizadorController.changePassword);
 // Associa/adiciona um veículo novo ao perfil do utilizador autenticado.
 app.post('/users/me/vehicles', authenticateToken, UtilizadorController.adicionarVeiculo);
+// Remove um veículo do perfil do utilizador autenticado.
+app.delete('/users/me/vehicles/:vehicleId', authenticateToken, UtilizadorController.removerVeiculo);
 
 
 // --- Rotas de Parques e Vagas de Estacionamento (Parks & Spots) ---

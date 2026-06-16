@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   PhArrowLeft, 
@@ -15,11 +15,13 @@ import {
   PhShieldCheck,
   PhFileText,
   PhSignOut,
-  PhHouseLine
+  PhHouseLine,
+  PhWarning,
+  PhTrash
 } from '@phosphor-icons/vue'
 import { useAuth } from '../composables/useAuth'
 import apiClient from '../api/client'
-import brands from '../api/brands'
+import brands, { brandModels } from '../api/brands'
 
 const ALLOWED_BRANDS = brands
 const ALLOWED_COLORS = ['Preto', 'Branco', 'Cinza', 'Vermelho', 'Azul', 'Verde', 'Amarelo', 'Outro']
@@ -49,11 +51,30 @@ const cancelEdit = () => {
 
 const saveEdit = async () => {
   if (!editValue.value) return
+  const value = editValue.value.trim()
+  
+  if (editingField.value === 'name') {
+    if (value.length < 2 || /\d/.test(value)) {
+      alert('Nome deve ter pelo menos 2 caracteres e não conter números.')
+      return
+    }
+  } else if (editingField.value === 'email') {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(value)) {
+      alert('Email inválido.')
+      return
+    }
+  } else if (editingField.value === 'phone') {
+    if (!/^9\d{8}$/.test(value)) {
+      alert('Telefone inválido (deve começar por 9 e ter 9 dígitos).')
+      return
+    }
+  }
   
   try {
     const payload = {}
     const fieldKey = editingField.value === 'name' ? 'name' : (editingField.value === 'email' ? 'email' : 'phone')
-    payload[fieldKey] = editValue.value
+    payload[fieldKey] = value
     
     const updatedUser = await apiClient.patch('/users/me', payload)
     
@@ -119,9 +140,27 @@ const vehicleError = ref('')
 const vehicleSuccess = ref('')
 const vehicleLoading = ref(false)
 
+// Validations
+const plateRegex = /^(?:[A-Z]{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-[A-Z]{2}|[A-Z]{2}-\d{2}-\d{2}|\d{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-\d{2}|[A-Z]{2}-[A-Z]{2}-\d{2})$/
+const isVehiclePlateValid = computed(() => {
+  return plateRegex.test(vehiclePlate.value.toUpperCase())
+})
+
+const isVehicleFormValid = computed(() => {
+  return vehiclePlate.value && 
+         isVehiclePlateValid.value && 
+         vehicleBrand.value && 
+         vehicleModel.value && 
+         vehicleColor.value
+})
+
+watch(vehicleBrand, () => {
+  vehicleModel.value = ''
+})
+
 const handleAddVehicle = async () => {
-  if (!vehiclePlate.value) {
-    vehicleError.value = 'A matrícula é obrigatória.'
+  if (!isVehicleFormValid.value) {
+    vehicleError.value = 'Por favor preencha todos os campos do veículo corretamente.'
     return
   }
   
@@ -158,6 +197,45 @@ const handleAddVehicle = async () => {
     vehicleError.value = err.message || 'Erro ao adicionar veículo.'
   } finally {
     vehicleLoading.value = false
+  }
+}
+
+// Vehicle Deletion State
+const showDeleteModal = ref(false)
+const vehicleToDelete = ref(null)
+const deleteLoading = ref(false)
+const deleteError = ref('')
+
+const confirmDeleteVehicle = (vehicle) => {
+  vehicleToDelete.value = vehicle
+  deleteError.value = ''
+  showDeleteModal.value = true
+}
+
+const handleDeleteVehicle = async () => {
+  if (!vehicleToDelete.value) return
+  
+  deleteLoading.value = true
+  deleteError.value = ''
+  
+  try {
+    const vId = vehicleToDelete.value.id_veiculo
+    await apiClient.delete(`/users/me/vehicles/${vId}`)
+    
+    // Update local list
+    if (localUser.value.vehicles) {
+      localUser.value.vehicles = localUser.value.vehicles.filter(v => v.id_veiculo !== vId)
+    }
+    
+    // Update local storage session
+    localStorage.setItem('user', JSON.stringify(localUser.value))
+    
+    showDeleteModal.value = false
+    vehicleToDelete.value = null
+  } catch (err) {
+    deleteError.value = err.message || err.error || 'Erro ao remover veículo.'
+  } finally {
+    deleteLoading.value = false
   }
 }
 
@@ -336,6 +414,9 @@ const handleSignOut = () => {
                 <span class="label">{{ v.brand || 'Unknown Brand' }} {{ v.model || 'Unknown Model' }}<span v-if="v.color"> ({{ v.color }})</span></span>
                 <span class="value">{{ v.plate }}</span>
               </div>
+              <button class="delete-vehicle-btn" @click="confirmDeleteVehicle(v)" title="Remove Vehicle">
+                <PhTrash :size="18" />
+              </button>
             </div>
             <div v-if="index < localUser.vehicles.length - 1" class="divider"></div>
           </template>
@@ -476,11 +557,22 @@ const handleSignOut = () => {
         <form @submit.prevent="handleAddVehicle" class="modal-form">
           <div class="form-group">
             <label class="form-label">License Plate *</label>
-            <input type="text" v-model="vehiclePlate" placeholder="e.g. AA-00-AA" class="modal-input" required />
+            <input 
+              type="text" 
+              v-model="vehiclePlate" 
+              @input="vehiclePlate = vehiclePlate.toUpperCase()"
+              placeholder="e.g. AA-00-AA" 
+              class="modal-input" 
+              :class="{ invalid: vehiclePlate && !isVehiclePlateValid, valid: vehiclePlate && isVehiclePlateValid }"
+              required 
+            />
+            <div v-if="vehiclePlate && !isVehiclePlateValid" class="field-error-msg animate-fade-in">
+              <PhWarning :size="14" /> Formato inválido (ex: AA-00-AA ou 00-AA-00).
+            </div>
           </div>
           <div class="form-group">
-            <label class="form-label">Brand</label>
-            <select v-model="vehicleBrand" class="modal-select">
+            <label class="form-label">Brand *</label>
+            <select v-model="vehicleBrand" class="modal-select" :class="{ valid: vehicleBrand }" required>
               <option value="" disabled>Select a brand</option>
               <option v-for="brand in ALLOWED_BRANDS" :key="brand" :value="brand">
                 {{ brand }}
@@ -488,13 +580,18 @@ const handleSignOut = () => {
             </select>
           </div>
           <div class="row">
-            <div class="form-group half">
-              <label class="form-label">Model</label>
-              <input type="text" v-model="vehicleModel" placeholder="e.g. Model 3" class="modal-input" />
+            <div v-if="vehicleBrand" class="form-group half animate-fade-in">
+              <label class="form-label">Model *</label>
+              <select v-model="vehicleModel" class="modal-select" :class="{ valid: vehicleModel }" required>
+                <option value="" disabled>Select model</option>
+                <option v-for="model in brandModels[vehicleBrand]" :key="model" :value="model">
+                  {{ model }}
+                </option>
+              </select>
             </div>
-            <div class="form-group half">
-              <label class="form-label">Color</label>
-              <select v-model="vehicleColor" class="modal-select">
+            <div class="form-group" :class="{ half: vehicleBrand, 'w-full': !vehicleBrand }">
+              <label class="form-label">Color *</label>
+              <select v-model="vehicleColor" class="modal-select" :class="{ valid: vehicleColor }" required>
                 <option value="" disabled>Select color</option>
                 <option v-for="color in ALLOWED_COLORS" :key="color" :value="color">
                   {{ color }}
@@ -505,11 +602,32 @@ const handleSignOut = () => {
           
           <div class="modal-actions">
             <button type="button" class="btn-secondary" @click="showVehicleModal = false">Cancel</button>
-            <button type="submit" class="btn-primary" :disabled="vehicleLoading">
+            <button type="submit" class="btn-primary" :disabled="vehicleLoading || !isVehicleFormValid">
               {{ vehicleLoading ? 'Adding...' : 'Add Vehicle' }}
             </button>
           </div>
         </form>
+      </div>
+    </div>
+
+    <!-- Delete Vehicle Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click.self="showDeleteModal = false">
+      <div class="modal-card bg-card radius-lg animate-fade-in">
+        <h3 class="modal-title">Remove Vehicle</h3>
+        
+        <div v-if="deleteError" class="error-banner mb-3">{{ deleteError }}</div>
+        
+        <div class="modal-body mb-4" style="margin-bottom: var(--spacing-4);">
+          <p>Are you sure you want to remove the vehicle with license plate <strong>{{ vehicleToDelete?.plate }}</strong>?</p>
+          <p class="text-secondary" style="font-size: 0.85rem; margin-top: var(--spacing-2);">This action cannot be undone and is only allowed if the vehicle has no pending or confirmed reservations.</p>
+        </div>
+        
+        <div class="modal-actions">
+          <button type="button" class="btn-secondary" @click="showDeleteModal = false" :disabled="deleteLoading">Cancel</button>
+          <button type="button" class="btn-primary btn-danger" @click="handleDeleteVehicle" :disabled="deleteLoading">
+            {{ deleteLoading ? 'Removing...' : 'Remove' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -929,6 +1047,50 @@ const handleSignOut = () => {
 }
 .half {
   flex: 1;
+}
+.w-full {
+  width: 100%;
+}
+.field-error-msg {
+  color: #ff4d4d;
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+  margin-left: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+input.invalid,
+select.invalid {
+  border-color: #ff4d4d !important;
+}
+input.valid,
+select.valid {
+  border-color: #4ade80 !important;
+}
+.delete-vehicle-btn {
+  background: transparent;
+  border: none;
+  color: var(--color-status-occupied);
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.delete-vehicle-btn:hover {
+  opacity: 0.8;
+}
+.btn-danger {
+  background-color: var(--color-status-occupied) !important;
+  color: var(--color-text-primary) !important;
+}
+.btn-danger:hover {
+  opacity: 0.9;
+}
+.mb-4 {
+  margin-bottom: var(--spacing-4);
 }
 </style>
 

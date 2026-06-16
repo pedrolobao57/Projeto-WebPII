@@ -6,9 +6,12 @@
  * e fluxo de recuperação de palavras-passe via simulação de e-mail na consola do servidor.
  */
 
+const { Op } = require('sequelize');
 const Utilizador = require('../models/utilizador');
 const Veiculo = require('../models/veiculo');
+const Reserva = require('../models/reserva');
 const bcrypt = require('bcryptjs');
+const { brandModels } = require('../config/brands');
 
 /**
  * @function signup
@@ -27,14 +30,18 @@ exports.signup = async (req, res) => {
         const { name, email, password, phone, vehicles } = req.body;
 
         // --- Validações de Integridade dos Dados de Entrada ---
-        if (!name || name.length < 2) {
-            return res.status(400).json({ message: 'Nome deve ter pelo menos 2 caracteres.' });
+        if (!name || name.length < 2 || /\d/.test(name)) {
+            return res.status(400).json({ message: 'Nome deve ter pelo menos 2 caracteres e não conter números.' });
         }
-        if (!email || !email.includes('@')) {
-            return res.status(400).json({ message: 'Email inválido (deve conter @).' });
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+            return res.status(400).json({ message: 'Email inválido.' });
         }
         if (!password || password.length < 6) {
             return res.status(400).json({ message: 'A password deve ter pelo menos 6 caracteres.' });
+        }
+        if (!phone || !/^9\d{8}$/.test(phone)) {
+            return res.status(400).json({ message: 'Telefone inválido (deve começar por 9 e ter 9 dígitos).' });
         }
 
         // Garante que o e-mail não foi registado previamente (emails são chaves únicas).
@@ -60,7 +67,7 @@ exports.signup = async (req, res) => {
         // Apenas o perfil 'CLIENTE' pode ter veículos associados.
         if (user.tipo_utilizador === 'CLIENTE' && vehicles && Array.isArray(vehicles)) {
             // Expressão regular para validar os formatos de matrícula portugueses padrão (ex: AA-00-00, 00-AA-00, 00-00-AA).
-            const plateRegex = /^(?:[A-Z]{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-[A-Z]{2}|[A-Z]{2}-\d{2}-\d{2}|\d{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-\d{2})$/;
+            const plateRegex = /^(?:[A-Z]{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-[A-Z]{2}|[A-Z]{2}-\d{2}-\d{2}|\d{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-\d{2}|[A-Z]{2}-[A-Z]{2}-\d{2})$/;
             
             for (const v of vehicles) {
                 if (v.plate) {
@@ -74,6 +81,17 @@ exports.signup = async (req, res) => {
                     const existingVehicle = await Veiculo.findOne({ where: { matricula: normalizedPlate } });
                     if (existingVehicle) {
                         return res.status(400).json({ message: 'Esta matrícula já está registada.' });
+                    }
+
+                    // Brand and Model checks:
+                    if (!v.brand || !brandModels[v.brand]) {
+                        return res.status(400).json({ message: 'Marca inválida ou não fornecida.' });
+                    }
+                    if (!v.model || !brandModels[v.brand].includes(v.model)) {
+                        return res.status(400).json({ message: 'Modelo inválido para a marca selecionada.' });
+                    }
+                    if (!v.color) {
+                        return res.status(400).json({ message: 'Cor é obrigatória.' });
                     }
                     
                     // Associa o veículo ao utilizador recém-criado.
@@ -233,10 +251,35 @@ exports.updateProfile = async (req, res) => {
             return res.status(404).json({ message: 'Utilizador não encontrado' });
         }
         
-        // Aplica as alterações aos campos apenas se estes forem fornecidos.
-        if (name) user.nome = name;
-        if (email) user.email = email;
-        if (phone) user.telefone = phone;
+        // Aplica as alterações aos campos apenas se estes forem fornecidos com validações.
+        if (name) {
+            if (name.length < 2 || /\d/.test(name)) {
+                return res.status(400).json({ message: 'Nome deve ter pelo menos 2 caracteres e não conter números.' });
+            }
+            user.nome = name;
+        }
+        if (email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                return res.status(400).json({ message: 'Email inválido.' });
+            }
+            const existingUser = await Utilizador.findOne({
+                where: {
+                    email,
+                    id_utilizador: { [Op.ne]: userId }
+                }
+            });
+            if (existingUser) {
+                return res.status(409).json({ message: 'Este email já está registado.' });
+            }
+            user.email = email;
+        }
+        if (phone) {
+            if (!/^9\d{8}$/.test(phone)) {
+                return res.status(400).json({ message: 'Telefone inválido (deve começar por 9 e ter 9 dígitos).' });
+            }
+            user.telefone = phone;
+        }
         
         // Salva as alterações na base de dados MySQL.
         await user.save();
@@ -364,7 +407,7 @@ exports.adicionarVeiculo = async (req, res) => {
         }
 
         const normalizedPlate = plate.trim().toUpperCase();
-        const plateRegex = /^(?:[A-Z]{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-[A-Z]{2}|[A-Z]{2}-\d{2}-\d{2}|\d{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-\d{2})$/;
+        const plateRegex = /^(?:[A-Z]{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-[A-Z]{2}|[A-Z]{2}-\d{2}-\d{2}|\d{2}-\d{2}-[A-Z]{2}|\d{2}-[A-Z]{2}-\d{2}|[A-Z]{2}-[A-Z]{2}-\d{2})$/;
         if (!plateRegex.test(normalizedPlate)) {
             return res.status(400).json({ message: 'Matrícula não identificada.' });
         }
@@ -375,13 +418,24 @@ exports.adicionarVeiculo = async (req, res) => {
             return res.status(400).json({ message: 'Esta matrícula já está registada.' });
         }
 
+        // Brand and Model checks:
+        if (!brand || !brandModels[brand]) {
+            return res.status(400).json({ message: 'Marca inválida ou não fornecida.' });
+        }
+        if (!model || !brandModels[brand].includes(model)) {
+            return res.status(400).json({ message: 'Modelo inválido para a marca selecionada.' });
+        }
+        if (!color) {
+            return res.status(400).json({ message: 'Cor é obrigatória.' });
+        }
+
         // Insere o registo da viatura indexada ao ID do utilizador autenticado atual.
         const vehicle = await Veiculo.create({
             id_utilizador: userId,
             matricula: normalizedPlate,
-            marca: brand || '',
-            modelo: model || '',
-            cor: color || ''
+            marca: brand,
+            modelo: model,
+            cor: color
         });
 
         res.status(201).json({
@@ -488,6 +542,54 @@ exports.resetPassword = async (req, res) => {
     } catch (err) {
         console.error(err);
         res.status(500).json({ message: 'Erro ao redefinir password.', error: err.message });
+    }
+};
+
+/**
+ * @function removerVeiculo
+ * @async
+ * @description Remove um veículo do perfil do utilizador autenticado atual.
+ * Verifica se o veículo pertence ao utilizador e se existem reservas ativas (PENDENTE ou CONFIRMADA)
+ * antes de o apagar da base de dados.
+ * 
+ * @param {Object} req - Objeto de pedido Express (Request). Contém o ID do veículo em `req.params.vehicleId`.
+ * @param {Object} res - Objeto de resposta Express (Response).
+ * @returns {Object} Mensagem de sucesso ou erro.
+ */
+exports.removerVeiculo = async (req, res) => {
+    try {
+        const userId = req.user.id_utilizador;
+        const { vehicleId } = req.params;
+
+        const vehicle = await Veiculo.findOne({
+            where: {
+                id_veiculo: vehicleId,
+                id_utilizador: userId
+            }
+        });
+
+        if (!vehicle) {
+            return res.status(404).json({ message: 'Veículo não encontrado ou não pertence a este utilizador.' });
+        }
+
+        // Verifica reservas ativas
+        const activeBooking = await Reserva.findOne({
+            where: {
+                id_veiculo: vehicleId,
+                estado_reserva: ['PENDENTE', 'CONFIRMADA']
+            }
+        });
+
+        if (activeBooking) {
+            return res.status(400).json({ message: 'Não é possível remover um veículo com reservas pendentes ou confirmadas.' });
+        }
+
+        await vehicle.destroy();
+
+        res.json({ message: 'Veículo removido com sucesso.' });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: 'Erro ao remover veículo.', error: err.message });
     }
 };
 
