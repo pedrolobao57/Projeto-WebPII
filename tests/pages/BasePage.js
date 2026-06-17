@@ -7,7 +7,6 @@ class BasePage {
 
   async navigate(url) {
     await this.driver.get(url);
-    await this.driver.sleep(300); // Wait for Vue hydration
   }
 
   async waitAndFind(locator, timeout = 10000) {
@@ -21,7 +20,6 @@ class BasePage {
     const element = await this.waitAndFind(locator, timeout);
     await this.driver.wait(until.elementIsEnabled(element), timeout);
     await this.driver.executeScript('arguments[0].click();', element);
-    await this.driver.sleep(100); // Wait for client-side navigation or animations
   }
 
   async typeText(locator, text, timeout = 10000) {

@@ -14,7 +14,7 @@ class RegisterPage extends BasePage {
     
     this.plateField = By.css("input[placeholder='License Plate']");
     this.brandSelect = By.xpath("//select[option[contains(text(), 'Select a brand')]]");
-    this.modelField = By.css("input[placeholder='Model']");
+    this.modelSelect = By.xpath("//select[option[contains(text(), 'Select model') or contains(text(), 'Selecione primeiro a marca')]]");
     this.colorSelect = By.xpath("//select[option[contains(text(), 'Select color')]]");
     
     this.termsCheckbox = By.css('.terms-checkbox');
@@ -34,7 +34,8 @@ class RegisterPage extends BasePage {
     const brandEl = await this.waitAndFind(this.brandSelect);
     await brandEl.sendKeys(brand);
 
-    await this.typeText(this.modelField, model);
+    const modelEl = await this.waitAndFind(this.modelSelect);
+    await modelEl.sendKeys(model);
 
     const colorEl = await this.waitAndFind(this.colorSelect);
     await colorEl.sendKeys(color);

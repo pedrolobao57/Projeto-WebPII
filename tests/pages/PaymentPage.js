@@ -26,6 +26,16 @@ class PaymentPage extends BasePage {
     await this.click(this.applyPromoBtn);
   }
 
+  async getPromoInputValue() {
+    const el = await this.waitAndFind(this.promoInput);
+    return await el.getAttribute("value");
+  }
+
+  async isApplyPromoBtnEnabled() {
+    const el = await this.waitAndFind(this.applyPromoBtn);
+    return await el.isEnabled();
+  }
+
   async getTotalAmount() {
     return await this.getText(this.totalPrice);
   }

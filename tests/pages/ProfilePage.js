@@ -11,7 +11,7 @@ class ProfilePage extends BasePage {
     this.addVehicleTrigger = By.css('.add-vehicle-trigger-btn');
     this.plateField = By.css("input[placeholder='e.g. AA-00-AA']");
     this.brandSelect = By.xpath("//select[option[contains(text(), 'Select a brand')]]");
-    this.modelField = By.css("input[placeholder='e.g. Model 3']");
+    this.modelSelect = By.xpath("//select[option[contains(text(), 'Select model')]]");
     this.colorSelect = By.xpath("//select[option[contains(text(), 'Select color')]]");
     this.submitVehicleBtn = By.xpath("//form[@class='modal-form']//button[@type='submit' and contains(., 'Add Vehicle')]");
   }
@@ -31,7 +31,8 @@ class ProfilePage extends BasePage {
     const brandEl = await this.waitAndFind(this.brandSelect);
     await brandEl.sendKeys(brand);
     
-    await this.typeText(this.modelField, model);
+    const modelEl = await this.waitAndFind(this.modelSelect);
+    await modelEl.sendKeys(model);
     
     const colorEl = await this.waitAndFind(this.colorSelect);
     await colorEl.sendKeys(color);
