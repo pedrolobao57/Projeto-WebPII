@@ -49,6 +49,7 @@ async function run(driver, helpers) {
 if (require.main === module) {
   (async () => {
     let driver;
+    let exitCode = 0;
     try {
       driver = await createDriver();
       const helpers = getHelpers(driver);
@@ -58,17 +59,17 @@ if (require.main === module) {
       console.log('Running PT-24: test_rf007_marcar_presenca_pt24...');
       await run(driver, helpers);
       console.log('✅ PT-24 passed successfully!');
-      process.exit(0);
     } catch (err) {
       console.error('❌ PT-24 failed:', err);
+      exitCode = 1;
       if (driver) {
         await takeScreenshot(driver, 'test_rf007_marcar_presenca_pt24');
       }
-      process.exit(1);
     } finally {
       if (driver) {
         await driver.quit();
       }
+      process.exit(exitCode);
     }
   })();
 }

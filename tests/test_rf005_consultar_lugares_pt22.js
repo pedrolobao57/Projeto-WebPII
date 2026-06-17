@@ -21,6 +21,7 @@ async function run(driver, helpers) {
 if (require.main === module) {
   (async () => {
     let driver;
+    let exitCode = 0;
     try {
       driver = await createDriver();
       const helpers = getHelpers(driver);
@@ -30,17 +31,17 @@ if (require.main === module) {
       console.log('Running PT-22: test_rf005_consultar_lugares_pt22...');
       await run(driver, helpers);
       console.log('✅ PT-22 passed successfully!');
-      process.exit(0);
     } catch (err) {
       console.error('❌ PT-22 failed:', err);
+      exitCode = 1;
       if (driver) {
         await takeScreenshot(driver, 'test_rf005_consultar_lugares_pt22');
       }
-      process.exit(1);
     } finally {
       if (driver) {
         await driver.quit();
       }
+      process.exit(exitCode);
     }
   })();
 }

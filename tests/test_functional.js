@@ -19,18 +19,9 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   let driver;
   let helpers;
 
-  before(async function () {
+  beforeEach(async function () {
     driver = await createDriver();
     helpers = getHelpers(driver);
-  });
-
-  after(async function () {
-    if (driver) {
-      await driver.quit();
-    }
-  });
-
-  beforeEach(async function () {
     await driver.get(`${BASE_URL}/login`);
     try {
       await driver.executeScript('window.localStorage.clear();');
@@ -38,8 +29,12 @@ describe('ParkSmart - Testes Funcionais & E2E (Jira Xray PT)', function () {
   });
 
   afterEach(async function () {
-    if (this.currentTest.state === 'failed') {
-      await takeScreenshot(driver, this.currentTest.title);
+    if (driver) {
+      if (this.currentTest.state === 'failed') {
+        await takeScreenshot(driver, this.currentTest.title);
+      }
+      await driver.quit();
+      driver = null;
     }
   });
 

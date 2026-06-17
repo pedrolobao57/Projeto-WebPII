@@ -30,6 +30,7 @@ async function run(driver, helpers) {
 if (require.main === module) {
   (async () => {
     let driver;
+    let exitCode = 0;
     try {
       driver = await createDriver();
       const helpers = getHelpers(driver);
@@ -39,17 +40,17 @@ if (require.main === module) {
       console.log('Running PT-23: test_rf006_reservar_lugares_pt23...');
       await run(driver, helpers);
       console.log('✅ PT-23 passed successfully!');
-      process.exit(0);
     } catch (err) {
       console.error('❌ PT-23 failed:', err);
+      exitCode = 1;
       if (driver) {
         await takeScreenshot(driver, 'test_rf006_reservar_lugares_pt23');
       }
-      process.exit(1);
     } finally {
       if (driver) {
         await driver.quit();
       }
+      process.exit(exitCode);
     }
   })();
 }
